@@ -268,20 +268,112 @@
             border-radius: 20px;
             margin: 1rem 0;
         }
+
+        /* Reading structure: skip link, intro figure, static nav, section headings */
+        .skip-link {
+            position: absolute; left: 1rem; top: -4rem; z-index: 20;
+            background: #1f452b; color: #fff; padding: 0.5rem 1rem;
+            border-radius: 999px; text-decoration: none; transition: top 0.15s;
+        }
+        .skip-link:focus { top: 1rem; }
+        .container > h2, main > h2 {
+            color: #1f4d33; font-size: 1.5rem; letter-spacing: -0.3px;
+            margin: 0 0 0.6rem; border-left: 6px solid #f7d44a; padding-left: 0.7rem;
+        }
+        .intro { margin-top: 0.4rem; }
+        .intro h2 { color: #1f4d33; font-size: 1.5rem; border-left: 6px solid #f7d44a;
+            padding-left: 0.7rem; margin-bottom: 0.6rem; }
+        .intro p { color: #2d543a; line-height: 1.8; max-width: 70ch; }
+        figure {
+            margin: 1.2rem 0 0.6rem; padding: 0.9rem 1rem;
+            border: 1px solid #dcebd4; border-radius: 28px; background: #ffffff;
+            box-shadow: 0 4px 12px rgba(70, 120, 80, 0.06);
+        }
+        figure svg { width: 100%; height: auto; display: block; }
+        figcaption {
+            font-size: 0.82rem; line-height: 1.7; color: #3f6b4a;
+            border-top: 1px dashed #d4e8d0; margin-top: 0.7rem; padding-top: 0.5rem;
+        }
+        .topnav {
+            margin: 1.4rem 0 0; padding: 0.9rem 1.1rem; border-radius: 24px;
+            background: #f7fdf4; border: 1px solid #dcebd4;
+        }
+        .topnav p { font-size: 0.85rem; color: #2d543a; line-height: 2; }
+        .topnav strong { color: #1f4d33; margin-right: 0.4rem; }
+        .topnav a {
+            display: inline-block; padding: 0.05rem 0.6rem; margin: 0.1rem 0.15rem;
+            border-radius: 999px; background: #eef7ea; border: 1px solid #d5e8cd;
+            color: #22543a; text-decoration: none; font-size: 0.8rem;
+        }
+        .topnav a:hover { background: #f7d44a; border-color: #dbb42c; color: #1f3d28; }
+        a:focus-visible, button:focus-visible { outline: 3px solid #147f80; outline-offset: 2px; }
+        @media (prefers-reduced-motion: reduce) { .skip-link, .card, .topnav a { transition: none; } }
+        @media print {
+            .topnav, .skip-link { display: none; }
+            figure { break-inside: avoid; }
+        }
     </style>
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="container">
-    <div class="header">
-        <h1><span class="emoji"></span><span class="title-text"></span></h1>
-        <div class="sub"></div>
-    </div>
+    <header class="header">
+        <h1><span class="emoji">🤖</span><span class="title-text">DeepSeek模型系列 · 深度解析</span></h1>
+        <div class="sub">📘 28章 实战体系</div>
+    </header>
 
-    <div id="cardContainer" class="course-grid"></div>
+    <section class="intro" aria-labelledby="lineage-heading">
+        <h2 id="lineage-heading">从 V1 到 V4：一条“效率优先”的主线</h2>
+        <p>本课程按技术演进顺序展开：先用稠密基座（V1）验证双语缩放与 10 万词表，再用 MoE + MLA（V2）证明“省显存也能更强”，到 V3 用 FP8 训练、MTP、DualPipe 把 671B 的训练成本压到约 $5.6M，最后进入 R1 的强化推理与 V3.1/V4 的混合注意力时代。下方时间线给出各代的年份与架构关键词。</p>
+        <figure>
+            <svg role="img" aria-labelledby="lineage-title lineage-desc" viewBox="0 0 760 210" xmlns="http://www.w3.org/2000/svg">
+                <title id="lineage-title">DeepSeek 模型家族演进时间线</title>
+                <desc id="lineage-desc">时间轴从左到右依次是 2024.01 的 V1、2024.05 的 V2、2024.12 的 V3、2025.01 的 R1 与 2026.04 的 V4，每个节点上方是版本名、下方是年份与架构关键词。</desc>
+                <rect width="760" height="210" rx="18" fill="#f7fdf4"/>
+                <line x1="60" y1="96" x2="700" y2="96" stroke="#8fb88a" stroke-width="4"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif" text-anchor="middle">
+                    <circle cx="100" cy="96" r="13" fill="#a7d4a0" stroke="#5a8f55" stroke-width="3"/>
+                    <circle cx="250" cy="96" r="13" fill="#f5d44a" stroke="#c8a52c" stroke-width="3"/>
+                    <circle cx="400" cy="96" r="13" fill="#f7b07a" stroke="#c47a3c" stroke-width="3"/>
+                    <circle cx="550" cy="96" r="13" fill="#b3d9e8" stroke="#5a8fa8" stroke-width="3"/>
+                    <circle cx="680" cy="96" r="13" fill="#c4b3e0" stroke="#7a63b0" stroke-width="3"/>
+                    <text x="100" y="62" font-size="20" fill="#1f4d33" font-weight="700">V1</text>
+                    <text x="250" y="62" font-size="20" fill="#1f4d33" font-weight="700">V2</text>
+                    <text x="400" y="62" font-size="20" fill="#1f4d33" font-weight="700">V3</text>
+                    <text x="550" y="62" font-size="20" fill="#1f4d33" font-weight="700">R1</text>
+                    <text x="680" y="62" font-size="20" fill="#1f4d33" font-weight="700">V4</text>
+                    <text x="100" y="132" font-size="14" fill="#3f6b4a">2024.01</text>
+                    <text x="250" y="132" font-size="14" fill="#3f6b4a">2024.05</text>
+                    <text x="400" y="132" font-size="14" fill="#3f6b4a">2024.12</text>
+                    <text x="550" y="132" font-size="14" fill="#3f6b4a">2025.01</text>
+                    <text x="680" y="132" font-size="14" fill="#3f6b4a">2026.04</text>
+                    <text x="100" y="164" font-size="13" fill="#2d543a">67B 稠密</text>
+                    <text x="250" y="164" font-size="13" fill="#2d543a">236B MoE+MLA</text>
+                    <text x="400" y="164" font-size="13" fill="#2d543a">671B · 约 $5.6M</text>
+                    <text x="550" y="164" font-size="13" fill="#2d543a">GRPO 推理 RL</text>
+                    <text x="680" y="164" font-size="13" fill="#2d543a">1.6T 混合注意力</text>
+                </g>
+            </svg>
+            <figcaption>时间线与架构关键词取自课程第 2、9、15、19、27 章及 README 章节索引；“约 $5.6M”为 V3 报告口径，第 15 章给出成本拆解，第 27 章 V4 的规模与注意力方案属于该章的技术设定。</figcaption>
+        </figure>
+    </section>
 
-    <div style="text-align:center;">
+    <nav class="topnav" aria-label="章节目录">
+        <p><strong>起点与对齐</strong><a href="01.html">01 效率困境</a><a href="02.html">02 V1 基座</a><a href="03.html">03 10万词表</a><a href="04.html">04 数据管线</a><a href="05.html">05 SFT+DPO</a></p>
+        <p><strong>MoE 与 MLA</strong><a href="06.html">06 MoE入门</a><a href="07.html">07 DeepSeekMoE</a><a href="08.html">08 MLA</a><a href="09.html">09 V2</a></p>
+        <p><strong>训练系统</strong><a href="10.html">10 无辅助损失均衡</a><a href="11.html">11 FP8</a><a href="12.html">12 MTP</a><a href="13.html">13 DualPipe</a><a href="14.html">14 128K</a><a href="15.html">15 $5.6M/671B</a></p>
+        <p><strong>推理·评测·垂直</strong><a href="16.html">16 推理优化</a><a href="17.html">17 量化</a><a href="18.html">18 评测</a><a href="19.html">19 GRPO</a><a href="20.html">20 R1</a><a href="21.html">21 Coder</a><a href="22.html">22 Math</a></p>
+        <p><strong>落地与演进</strong><a href="23.html">23 本地部署</a><a href="24.html">24 微调</a><a href="25.html">25 API</a><a href="26.html">26 V3.1/V3.2</a><a href="27.html">27 V4</a><a href="28.html">28 生态</a></p>
+    </nav>
+
+    <main id="content">
+        <h2 id="chapters-heading">全部章节</h2>
+        <div id="cardContainer" class="course-grid"></div>
+    </main>
+
+    <footer style="text-align:center;">
         <div class="footer"></div>
-    </div>
+    </footer>
 </div>
 
 <script>

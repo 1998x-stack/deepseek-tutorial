@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第10章 无辅助损失负载均衡</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第10章 无辅助损失负载均衡</h1>
+            <p class="dek">DeepSeek-V3 用一组可动态更新的专家偏置项替掉了传统的辅助损失：不干扰主目标，却把稀疏训练稳定地拉了回来。</p>
+        </header>
 
         <p>大家好！今天我们来聊一个看似不起眼、但实际上让无数 MoE 训练团队头疼不已的问题——<strong>负载均衡</strong>。</p>
 
@@ -56,7 +59,7 @@
 
         <p>先看看传统的做法。为了平衡专家负载，GShard 和 Switch Transformer 等经典 MoE 工作都会在损失函数中加入一项辅助损失，鼓励均匀路由：</p>
 
-        <pre><code># 传统的专家级平衡损失
+        <pre style="overflow-x:auto"><code># 传统的专家级平衡损失
 L_exp_bal = alpha * sum(f_i * P_i for i in range(N_r))
 
 其中:
@@ -82,10 +85,27 @@ alpha = 平衡因子（超参数）</code></pre>
 
         <p>具体来说，每个专家 i 维护一个动态的偏置项 b_i。在路由决策时，不是直接用专家- token 的亲和度分数 s_i,t 来选择 top-K，而是用 <strong>s_i,t + b_i</strong> 来选择：</p>
 
-        <pre><code>g'_i,t = sigmoid(s_i,t + b_i)  # 用于路由选择的分数
+        <pre style="overflow-x:auto"><code>g'_i,t = sigmoid(s_i,t + b_i)  # 用于路由选择的分数
 
 # 实际门控值仍然基于原始亲和度
 g_i,t = sigmoid(s_i,t) / sum(...)  # 用于加权专家输出</code></pre>
+
+        <div class="math-equation" role="group" aria-label="偏置项路由的选择与门控公式">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="偏置项路由公式，可横向滚动">
+                <math display="block" aria-label="选择分数 g prime 下标 i t 等于 sigmoid 作用于 s 下标 i t 加 b 下标 i；门控 g 下标 i t 等于 sigmoid s 下标 i t 除以对所有 j 的 sigmoid s 下标 j t 求和">
+                    <mrow>
+                        <msubsup><mi>g</mi><mrow><mi>i</mi><mo>,</mo><mi>t</mi></mrow><mo>′</mo></msubsup><mo>=</mo>
+                        <mi>sigmoid</mi><mo>(</mo><msub><mi>s</mi><mrow><mi>i</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>+</mo><msub><mi>b</mi><mi>i</mi></msub><mo>)</mo>
+                        <mo>,</mo><mo>&#x2003;</mo>
+                        <msub><mi>g</mi><mrow><mi>i</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>=</mo>
+                        <mfrac>
+                            <mrow><mi>sigmoid</mi><mo>(</mo><msub><mi>s</mi><mrow><mi>i</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>)</mo></mrow>
+                            <mrow><munder><mo>∑</mo><mi>j</mi></munder><mi>sigmoid</mi><mo>(</mo><msub><mi>s</mi><mrow><mi>j</mi><mo>,</mo><mi>t</mi></mrow></msub><mo>)</mo></mrow>
+                        </mfrac>
+                    </mrow>
+                </math>
+            </div>
+        </div>
 
         <p>关键点在于：<strong>b_i 只影响"选择谁"，不影响"选中的专家贡献多大权重"。</strong></p>
 
@@ -96,10 +116,54 @@ g_i,t = sigmoid(s_i,t) / sum(...)  # 用于加权专家输出</code></pre>
             <li>如果专家 i <strong>欠载</strong>（负载低于平均值），就提高它的偏置 b_i（加上 γ）</li>
         </ul>
 
+        <figure>
+            <svg role="img" aria-labelledby="bias-route-title bias-route-desc" viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+                <title id="bias-route-title">偏置项负载均衡的反馈回路</title>
+                <desc id="bias-route-desc">token 表示先算与专家的亲和度 s，加上偏置 b 后再做 Top-K 选择并送到专家；每步统计各专家负载，过载的专家 b 减 γ，欠载的 b 加 γ。偏置只影响选择，不影响选中专家的输出权重；推理时偏置置零。</desc>
+                <rect width="760" height="300" rx="16" fill="#faf8ff"/>
+                <defs><marker id="br-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 z" fill="#7c3aed"/></marker></defs>
+                <g font-family="system-ui, 'PingFang SC', sans-serif" font-size="14" text-anchor="middle">
+                    <rect x="16" y="58" width="104" height="54" rx="10" fill="#ede9fe" stroke="#8b5cf6"/>
+                    <text x="68" y="91" fill="#3b0764">token h_t</text>
+                    <rect x="152" y="58" width="160" height="54" rx="10" fill="#e0f2fe" stroke="#0ea5e9"/>
+                    <text x="232" y="84" fill="#0c4a6e">亲和度 s</text><text x="232" y="102" font-size="12" fill="#0c4a6e">h_t · e_i</text>
+                    <rect x="344" y="58" width="126" height="54" rx="10" fill="#fef9c3" stroke="#eab308" stroke-width="2"/>
+                    <text x="407" y="91" fill="#713f12">s + b_i</text>
+                    <rect x="502" y="58" width="120" height="54" rx="10" fill="#ffe4d6" stroke="#d06d4d"/>
+                    <text x="562" y="91" fill="#7c2d12">Top-K 选择</text>
+                    <rect x="654" y="58" width="90" height="54" rx="10" fill="#ede9fe" stroke="#8b5cf6"/>
+                    <text x="699" y="91" fill="#3b0764">专家输出</text>
+                    <rect x="420" y="204" width="200" height="54" rx="10" fill="#f5d0fe" stroke="#c026d3"/>
+                    <text x="520" y="230" fill="#701a75">每步统计各专家负载</text>
+                    <text x="520" y="248" font-size="12" fill="#701a75">过载 −γ / 欠载 +γ → 更新 b_i</text>
+                    <g stroke="#7c3aed" stroke-width="2.5" fill="none" marker-end="url(#br-arrow)">
+                        <path d="M120 85 H150"/>
+                        <path d="M312 85 H342"/>
+                        <path d="M470 85 H500"/>
+                        <path d="M622 85 H652"/>
+                        <path d="M562 112 V202"/>
+                    </g>
+                    <path d="M420 231 H300 V112" stroke="#c026d3" stroke-width="2.5" fill="none" stroke-dasharray="7 5" marker-end="url(#br-arrow)"/>
+                    <text x="300" y="168" font-size="12" fill="#c026d3">b_i 更新（不参与计算图）</text>
+                </g>
+            </svg>
+            <figcaption>实线是每次前向的“选择”路径（s+b_i → Top-K → 专家），虚线是每步结束后独立进行的偏置更新。偏置只进入选择分数，选中专家仍用原始亲和度加权。γ 值与停止时机见 10.2 节。</figcaption>
+        </figure>
+
         <p>这个 γ 是一个超参数，DeepSeek-V3 在训练的前 14.3T token 中设为 0.001，后 500B token 设为 0.0（即停止偏置更新）。</p>
 
         <div class="tip">
             <strong>直观理解：</strong>偏置项相当于在选举中给"弱势候选人"加票。原始亲和度代表了"这个 token 觉得哪个专家最合适"，偏置项则像选举委员会给排名靠后的候选人额外加分，鼓励选民多考虑他们。而且这股"政策性倾斜"只在训练中使用，推理时偏置项被清零，完全由原始亲和度决定路由。
+        </div>
+
+        <div class="kv-widget">
+            <p><strong>偏置项沙盘：</strong>令 4 个专家的初始负载占比为 40% / 25% / 20% / 15%（平均 25%）。按 10.2 节规则（γ=0.001）：负载高于平均的专家 b_i −= γ，低于平均的 b_i += γ。点击更新观察偏置如何积累。</p>
+            <div class="kv-controls">
+                <button type="button" id="bias-step">更新一步</button>
+                <button type="button" id="bias-reset">重置</button>
+            </div>
+            <p class="kv-status" id="bias-status" role="status" aria-live="polite"></p>
+            <p>本沙盘只展示偏置的更新规则本身（负载不变）；真实训练中偏置变化会在后续 step 反过来把负载拉向均值。</p>
         </div>
 
         <h2>10.3 序列级补充策略</h2>
@@ -110,7 +174,7 @@ g_i,t = sigmoid(s_i,t) / sum(...)  # 用于加权专家输出</code></pre>
 
         <p>为了解决这个问题，DeepSeek-V3 还引入了一个 <strong>序列级补充损失</strong>：</p>
 
-        <pre><code>L_bal = alpha * sum(f_i * P_i for i in range(N_r))  # 仍在序列级别计算
+        <pre style="overflow-x:auto"><code>L_bal = alpha * sum(f_i * P_i for i in range(N_r))  # 仍在序列级别计算
 
 其中:
 f_i = 单条序列中选择专家 i 的 token 比例
@@ -155,7 +219,7 @@ P_i = 单条序列中路由到专家 i 的平均 sigmoid 概率</code></pre>
 
         <p>第三，<strong>不丢弃任何 token</strong>。传统 MoE 训练中，当某个设备过载时会丢弃一些低分 token。但 V3 中由于负载均衡效果很好，全程不需要丢弃任何 token，保证训练和推理行为一致。</p>
 
-        <pre><code># 偏置更新伪代码
+        <pre style="overflow-x:auto"><code># 偏置更新伪代码
 def update_biases(expert_loads, biases, gamma, num_experts):
     avg_load = mean(expert_loads)
     for i in range(num_experts):
@@ -193,13 +257,54 @@ def update_biases(expert_loads, biases, gamma, num_experts):
 
         <p>下一章，我们将探讨 DeepSeek-V3 的另一个"工程绝活"——<strong>FP8 混合精度训练</strong>。这是首次在千亿参数模型上成功应用的 FP8 训练框架，它将训练成本直接砍半，同时保持了模型精度。</p>
 
+        <h2>10.7 参考文献与延伸</h2>
+        <ul>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2412.19437">DeepSeek-V3 Technical Report</a>（arXiv:2412.19437）——无辅助损失负载均衡、偏置项更新规则与序列级补充损失的原始定义见其相关章节。</li>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2401.06066">DeepSeekMoE</a>（arXiv:2401.06066）——传统辅助损失与三层次均衡的背景。</li>
+        </ul>
+        <p class="note">本章的 γ=0.001 / 0.0001、平均提升 0.3-0.5 个百分点、14.8T token 无 loss spike 等数字均引自 DeepSeek-V3 技术报告及本章既有说明；上方沙盘的负载分布为便于演示而设定的<strong>教学示意</strong>。</p>
+
         <div class="footer-nav">
             <a href="09.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="11.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var loads = [0.40, 0.25, 0.20, 0.15];
+    var biases = [0, 0, 0, 0];
+    var gamma = 0.001;
+    var step = document.getElementById('bias-step');
+    var reset = document.getElementById('bias-reset');
+    var status = document.getElementById('bias-status');
+    if (!step || !reset || !status) { return; }
+    function average() {
+        var sum = 0;
+        for (var i = 0; i < loads.length; i++) { sum += loads[i]; }
+        return sum / loads.length;
+    }
+    function render() {
+        var avg = average(), parts = [];
+        for (var i = 0; i < loads.length; i++) {
+            var tag = loads[i] > avg ? '过载' : (loads[i] < avg ? '欠载' : '持平');
+            parts.push('E' + (i + 1) + ' 负载 ' + Math.round(loads[i] * 100) + '%（' + tag + '）b=' + biases[i].toFixed(3));
+        }
+        status.textContent = parts.join('；') + '。';
+    }
+    step.addEventListener('click', function () {
+        var avg = average();
+        for (var i = 0; i < loads.length; i++) {
+            if (loads[i] > avg) { biases[i] -= gamma; }
+            else if (loads[i] < avg) { biases[i] += gamma; }
+        }
+        render();
+    });
+    reset.addEventListener('click', function () { biases = [0, 0, 0, 0]; render(); });
+    render();
+})();
+</script>
 </body>
 </html>

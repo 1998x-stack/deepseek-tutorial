@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第7章 DeepSeekMoE</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第7章 DeepSeekMoE</h1>
+            <p class="dek">共享专家 + 细粒度路由专家 + 轻量化门控 + 多层次负载均衡——这套设计是如何把“同等算力下的容量”推到极致的。</p>
+        </header>
 
         <p>大家好，欢迎回到 DeepSeek 系列教程。上一章我们打下了 MoE 架构的理论基础——从稠密 vs 稀疏的区别，到门控路由、负载均衡等核心概念。现在，让我们看看 DeepSeek 在 MoE 上做出了什么样的创新。</p>
 
@@ -74,7 +77,46 @@
 
         <p><strong>路由专家：</strong>这部分专家通过门控网络进行选择——每个 token 只激活少数路由专家（通常 Top-2）。路由专家的职责是分工处理"专用知识"——比如数学推理需要调用的专家、代码生成需要调用的专家。路由专家就是"选修课"——学生只选自己需要的课程。</p>
 
-        <pre><code>DeepSeekMoE 层的结构:
+        <figure>
+            <svg role="img" aria-labelledby="moe-layer-title moe-layer-desc" viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+                <title id="moe-layer-title">DeepSeekMoE 单层的共享专家与路由专家数据流</title>
+                <desc id="moe-layer-desc">输入 x 分成两条路径：上路径经过始终激活的共享专家得到 h_shared；下路径经过门控 Router 选中 Top-2 路由专家并加权求和得到 h_routed；两者相加得到本层输出。</desc>
+                <rect width="760" height="300" rx="16" fill="#faf8ff"/>
+                <defs>
+                    <marker id="moe-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 z" fill="#7c3aed"/></marker>
+                    <marker id="moe-arrow-start" markerWidth="9" markerHeight="9" refX="2" refY="4.5" orient="auto"><path d="M9 0 L0 4.5 L9 9 z" fill="#c026d3"/></marker>
+                </defs>
+                <g font-family="system-ui, 'PingFang SC', sans-serif" font-size="15" text-anchor="middle">
+                    <rect x="20" y="122" width="86" height="56" rx="10" fill="#ede9fe" stroke="#8b5cf6"/>
+                    <text x="63" y="156" fill="#3b0764">输入 x</text>
+                    <rect x="160" y="40" width="170" height="56" rx="10" fill="#e0f2fe" stroke="#0ea5e9"/>
+                    <text x="245" y="66" fill="#0c4a6e">共享专家</text><text x="245" y="84" font-size="12" fill="#0c4a6e">始终激活</text>
+                    <rect x="160" y="204" width="170" height="56" rx="10" fill="#fef9c3" stroke="#eab308"/>
+                    <text x="245" y="230" fill="#713f12">门控 Router</text><text x="245" y="248" font-size="12" fill="#713f12">Top-2 选择</text>
+                    <rect x="380" y="176" width="120" height="44" rx="9" fill="#ffe4d6" stroke="#d06d4d"/>
+                    <text x="440" y="203" fill="#7c2d12">路由专家 e₁</text>
+                    <rect x="380" y="242" width="120" height="44" rx="9" fill="#ffe4d6" stroke="#d06d4d"/>
+                    <text x="440" y="269" fill="#7c2d12">路由专家 e₂</text>
+                    <rect x="545" y="122" width="86" height="56" rx="10" fill="#f5d0fe" stroke="#c026d3"/>
+                    <text x="588" y="156" fill="#701a75">求和</text>
+                    <rect x="650" y="122" width="96" height="56" rx="10" fill="#ede9fe" stroke="#8b5cf6"/>
+                    <text x="698" y="156" fill="#3b0764">本层输出</text>
+                    <g stroke="#7c3aed" stroke-width="2.5" fill="none" marker-end="url(#moe-arrow)">
+                        <path d="M106 136 H133 V68 H158"/>
+                        <path d="M106 164 H133 V232 H158"/>
+                        <path d="M330 68 H510 V136 H543"/>
+                        <path d="M631 150 H648"/>
+                    </g>
+                    <g stroke="#c026d3" stroke-width="2.5" fill="none" marker-end="url(#moe-arrow)">
+                        <path d="M500 196 H524 V152 H543"/>
+                        <path d="M500 262 H524 V168 H543"/>
+                    </g>
+                </g>
+            </svg>
+            <figcaption>上路径（共享专家）对所有 token 恒定生效；下路径（Router→Top-2 路由专家→加权求和）逐 token 变化。两者相加构成本层输出，即下节的 output 公式。共享 1 个 + 路由 16 个、每 token 激活 3 个为本章 7.2 节的配置。</figcaption>
+        </figure>
+
+        <pre style="overflow-x:auto"><code>DeepSeekMoE 层的结构:
 
 输入: x
 
@@ -92,6 +134,23 @@
 传统 MoE: output = Σ_{i in topk} gate_weights_i × Expert_i(x)
 DeepSeekMoE: output = SharedExpert(x) + Σ_{i in topk} gate_weights_i × RoutedExpert_i(x)</code></pre>
 
+        <div class="math-equation" role="group" aria-label="DeepSeekMoE 层输出公式">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="DeepSeekMoE 层输出公式，可横向滚动">
+                <math display="block" aria-label="output 等于 SharedExpert 作用在 x 上，加上对 i 属于 TopK 求和：g 下标 i 乘 RoutedExpert 下标 i 作用在 x 上">
+                    <mrow>
+                        <mi>output</mi><mo>=</mo><mi>SharedExpert</mi><mo>(</mo><mi>x</mi><mo>)</mo><mo>+</mo>
+                        <munderover>
+                            <mo>∑</mo>
+                            <mrow><mi>i</mi><mo>∈</mo><mtext>TopK</mtext></mrow>
+                            <mrow></mrow>
+                        </munderover>
+                        <msub><mi>g</mi><mi>i</mi></msub><mo>·</mo>
+                        <msub><mi>RoutedExpert</mi><mi>i</mi></msub><mo>(</mo><mi>x</mi><mo>)</mo>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
         <p>这个设计的精妙之处：<strong>共享专家吸收了"通用知识"的负载，让路由专家可以更专注于 specialization。</strong>在传统 MoE 中，每个 token 需要在 Top-2 专家中同时获取通用知识和专用知识。一个数学问题可能 Top-1 专家提供通用语义理解，Top-2 专家提供数学推理——但分工不清晰。有了共享专家后，"通用理解"这个任务从路由专家身上剥离了，路由专家可以更纯粹地专注于"专业分工"。</p>
 
         <p>在 DeepSeekMoE 中，共享专家有 1 个，路由专家有 16 个。每 token 激活 1 个共享 + 2 个路由 = 3 个专家。</p>
@@ -108,7 +167,7 @@ DeepSeekMoE: output = SharedExpert(x) + Σ_{i in topk} gate_weights_i × RoutedE
 
         <p>DeepSeekMoE 的做法是：<strong>保持总参数预算不变，但将每个专家的维度减小，同时增加专家数量。</strong>相当于把原来 8 个"大专家"拆成了 16 个"小专家"。</p>
 
-        <pre><code>传统 MoE（Mixtral 8x7B 风格）:
+        <pre style="overflow-x:auto"><code>传统 MoE（Mixtral 8x7B 风格）:
 8 个专家 × 每个专家 7B 参数 = 56B 总参数（路由部分）
 每 token 激活 2 个专家
 
@@ -138,7 +197,7 @@ DeepSeekMoE 细粒度切分:
 
         <p>核心思想：<strong>只用 token 表示和专家嵌入之间的简单点积相似度来决定路由。</strong></p>
 
-        <pre><code>DeepSeekMoE 轻量化门控:
+        <pre style="overflow-x:auto"><code>DeepSeekMoE 轻量化门控:
 
 1. 专家嵌入矩阵 E: [d_model, num_routed_experts]
    每个专家 e_i 有一个可学习的嵌入向量 E[:, i]
@@ -166,7 +225,7 @@ DeepSeekMoE 细粒度切分:
 
         <p><strong>第一层：Expert-Level 负载均衡。</strong>这是最基础的层面，在训练损失中加入辅助损失，确保每个路由专家分配到的 token 数量大致相等。</p>
 
-        <pre><code>Expert-Level 辅助损失:
+        <pre style="overflow-x:auto"><code>Expert-Level 辅助损失:
 
 L_exp = α × Σ_{i=1}^{N} f_i × P_i
 
@@ -174,9 +233,21 @@ f_i = 分配给专家 i 的 token 比例
 P_i = 门控分配给专家 i 的平均概率
 α = 超参数（DeepSeekMoE 中取 0.01）</code></pre>
 
+        <div class="math-equation" role="group" aria-label="Expert-Level 辅助损失公式">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="Expert-Level 辅助损失公式，可横向滚动">
+                <math display="block" aria-label="L exp 等于 alpha 乘对 i 从 1 到 N 求和 f 下标 i 乘 P 下标 i">
+                    <mrow>
+                        <msub><mi>L</mi><mtext>exp</mtext></msub><mo>=</mo><mi>α</mi>
+                        <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover>
+                        <msub><mi>f</mi><mi>i</mi></msub><mo>·</mo><msub><mi>P</mi><mi>i</mi></msub>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
         <p><strong>第二层：Device-Level 负载均衡。</strong>在分布式训练中，不同的专家被分配到不同的 GPU 上。如果某个 GPU 上的专家接收的 token 远多于其他 GPU，就会产生通信热点，降低训练效率。Device-Level 的辅助损失确保每个设备上的专家总负载均衡。</p>
 
-        <pre><code>Device-Level 辅助损失:
+        <pre style="overflow-x:auto"><code>Device-Level 辅助损失:
 
 L_dev = α_d × Σ_{d=1}^{D} f_d × P_d
 
@@ -305,12 +376,19 @@ D = 设备总数</code></pre>
 
         <p>下一章，我们将进入 DeepSeek 另一个核心架构创新——<strong>MLA（Multi-head Latent Attention）注意力机制</strong>。MLA 用低秩压缩的思想，将 KV Cache 减少到传统注意力的 5-10%，同时保持了注意力表达的完整性。这是 DeepSeek 高效支持超长上下文的关键技术。</p>
 
+        <h2>7.8 参考文献与延伸</h2>
+        <ul>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2401.06066">DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models</a>（arXiv:2401.06066）——共享/路由专家、细粒度切分与三层次负载均衡的原始定义。</li>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2405.04434">DeepSeek-V2</a>（arXiv:2405.04434）与 <a href="https://arxiv.org/abs/2412.19437">DeepSeek-V3 Technical Report</a>（arXiv:2412.19437）——MoE 在后续版本中的延用与演进。</li>
+        </ul>
+        <p class="note">本章的评测提升幅度（MMLU +27%、GSM8K +61%、HumanEval +84%、BBH +30%）与 70/30 → 52/48 的均衡改善均引自 DeepSeekMoE 论文及本章既有说明；图中“1 共享 + 16 路由、每 token 激活 3 个”为论文基础配置。</p>
+
         <div class="footer-nav">
             <a href="06.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="08.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>

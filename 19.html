@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第19章 GRPO强化推理</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第19章 GRPO 强化推理</h1>
+            <p class="dek">把 PPO 里的 Critic 换成“同 prompt 的一组采样均值”——GRPO 用更少模型、更少超参，换来更稳的推理 RL。</p>
+        </header>
 
         <p>2024 年底，DeepSeek 的团队遇到了一个让人头疼的问题：他们发现 V3 在数学和推理任务上表现不错，但距离真正的"推理专家"还有明显差距。模型能写代码、能做翻译、能写诗，但面对一个需要多步推理的数学题，它有时候会"蒙"一个答案，而不是真正地一步一步推理出来。</p>
 
@@ -95,7 +98,7 @@
 
         <p>GRPO 不依赖价值模型，大大简化了训练流程。它只需要三个组件：Policy Model、Reward Model 和 Reference Model。Critic 被完全移除。</p>
 
-        <pre><code># GRPO 训练的核心流程（伪代码）
+        <pre style="overflow-x:auto"><code># GRPO 训练的核心流程（伪代码）
 for each prompt in batch:
     # 采样多个输出（Group Sampling）
     outputs = policy_model.generate(prompt, num_samples=G)
@@ -111,6 +114,41 @@ for each prompt in batch:
     # 策略梯度更新（带 KL 惩罚）
     loss = -mean(advantages * log_prob(outputs)) + beta * kl_divergence</code></pre>
 
+        <figure>
+            <svg role="img" aria-labelledby="grpo-flow-title grpo-flow-desc" viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+                <title id="grpo-flow-title">GRPO 的组采样与组内标准化流程</title>
+                <desc id="grpo-flow-desc">同一个 prompt 经策略模型采样出 G 个输出，逐个打分得到奖励 r_i，再在组内做标准化得到 advantage A_i，用于策略更新；全程不需要价值模型（Critic）。</desc>
+                <rect width="760" height="300" rx="16" fill="#faf8ff"/>
+                <defs><marker id="grpo-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 z" fill="#7c3aed"/></marker></defs>
+                <g font-family="system-ui, 'PingFang SC', sans-serif" font-size="14" text-anchor="middle">
+                    <rect x="16" y="122" width="92" height="56" rx="10" fill="#ede9fe" stroke="#8b5cf6"/>
+                    <text x="62" y="155" fill="#3b0764">prompt x</text>
+                    <rect x="138" y="122" width="106" height="56" rx="10" fill="#e0f2fe" stroke="#0ea5e9"/>
+                    <text x="191" y="155" fill="#0c4a6e">Policy 采样</text>
+                    <rect x="286" y="52" width="120" height="42" rx="9" fill="#ffe4d6" stroke="#d06d4d"/>
+                    <text x="346" y="79" fill="#7c2d12">o₁ → r₁</text>
+                    <rect x="286" y="112" width="120" height="42" rx="9" fill="#ffe4d6" stroke="#d06d4d"/>
+                    <text x="346" y="139" fill="#7c2d12">o₂ → r₂</text>
+                    <rect x="286" y="172" width="120" height="42" rx="9" fill="#ffe4d6" stroke="#d06d4d"/>
+                    <text x="346" y="199" fill="#7c2d12">o₃ → r₃</text>
+                    <text x="346" y="238" font-size="12" fill="#475569">… 共 G 个输出</text>
+                    <rect x="452" y="104" width="118" height="56" rx="10" fill="#fef9c3" stroke="#eab308" stroke-width="2"/>
+                    <text x="511" y="130" fill="#713f12">组内奖励</text><text x="511" y="148" font-size="12" fill="#713f12">{r₁ … r_G}</text>
+                    <rect x="606" y="104" width="138" height="56" rx="10" fill="#f5d0fe" stroke="#c026d3"/>
+                    <text x="675" y="130" fill="#701a75">标准化 → A_i</text><text x="675" y="148" font-size="12" fill="#701a75">策略更新</text>
+                    <g stroke="#7c3aed" stroke-width="2.5" fill="none" marker-end="url(#grpo-arrow)">
+                        <path d="M108 150 H136"/>
+                        <path d="M244 150 H264 V73 H284"/>
+                        <path d="M244 150 H284"/>
+                        <path d="M244 150 H264 V193 H284"/>
+                        <path d="M406 144 H450"/>
+                        <path d="M570 132 H604"/>
+                    </g>
+                </g>
+            </svg>
+            <figcaption>同一 prompt 的 G 个输出构成一个“组”，组内奖励的均值与标准差把绝对奖励换算成相对优势 A_i；奖励既可以是规则奖励，也可以来自奖励模型。Critic 在这条链路中不存在。</figcaption>
+        </figure>
+
         <p>这个伪代码看起来简单，但背后有坚实的理论支撑。我们来拆解每一步。</p>
 
         <h2>19.3 组内采样 + 平均奖励</h2>
@@ -121,17 +159,49 @@ for each prompt in batch:
 
         <p>具体来说，GRPO 的 advantage 计算方式如下：</p>
 
-        <pre><code>对于 prompt x，采样 G 个输出 {o1, o2, ..., oG}
+        <pre style="overflow-x:auto"><code>对于 prompt x，采样 G 个输出 {o1, o2, ..., oG}
 每个输出 oi 获得奖励 ri = R(oi)
 组内标准化：
   μ = (1/G) * Σ ri          # 组平均
   σ = sqrt((1/G) * Σ(ri-μ)²) # 组标准差
   Ai = (ri - μ) / (σ + ε)    # 每个输出的 advantage</code></pre>
 
+        <div class="math-equation" role="group" aria-label="GRPO 组内标准化公式">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="GRPO 组内标准化公式，可横向滚动">
+                <math display="block" aria-label="A 下标 i 等于 r 下标 i 减 mu 除以 sigma 加 epsilon；mu 等于 G 分之一乘对 j 从 1 到 G 求和 r 下标 j；sigma 等于根号下 G 分之一乘对 j 从 1 到 G 求和 r 下标 j 减 mu 的平方">
+                    <mrow>
+                        <msub><mi>A</mi><mi>i</mi></msub><mo>=</mo>
+                        <mfrac>
+                            <mrow><msub><mi>r</mi><mi>i</mi></msub><mo>−</mo><mi>μ</mi></mrow>
+                            <mrow><mi>σ</mi><mo>+</mo><mi>ε</mi></mrow>
+                        </mfrac><mo>,</mo><mo>&#x2003;</mo>
+                        <mi>μ</mi><mo>=</mo><mfrac><mn>1</mn><mi>G</mi></mfrac>
+                        <munderover><mo>∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>G</mi></munderover>
+                        <msub><mi>r</mi><mi>j</mi></msub><mo>,</mo><mo>&#x2003;</mo>
+                        <mi>σ</mi><mo>=</mo>
+                        <msqrt><mrow><mfrac><mn>1</mn><mi>G</mi></mfrac>
+                            <munderover><mo>∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mi>G</mi></munderover>
+                            <msup><mrow><mo>(</mo><msub><mi>r</mi><mi>j</mi></msub><mo>−</mo><mi>μ</mi><mo>)</mo></mrow><mn>2</mn></msup>
+                        </mrow></msqrt>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
         <p>这里的 advantage Ai 的含义是："这个输出比组内平均水平好多少（或差多少）"。标准化后的 advantage 零均值、单位方差，天然消除了不同 prompt 之间奖励分布的差异，让训练更加稳定。</p>
 
         <div class="tip">
             <strong>直观理解：</strong>GRPO 的组内平均就像在班级考试中，不是用绝对分数（90 分是好是坏取决于试卷难度），而是用相对排名来评价每个学生的表现。你说"我考了 90 分"没有意义，但说"我比全班平均分高 20 分"就很有意义了。
+        </div>
+
+        <div class="kv-widget">
+            <p><strong>组内标准化沙盘：</strong>取 G=4，选择一组奖励，看 advantage <em>A_i = (r_i − μ) / (σ + ε)</em> 如何把绝对分数变成相对优势（ε 取 1e-6 防止除零）。</p>
+            <div class="kv-controls">
+                <button type="button" data-grp="pair" aria-pressed="true">两两对错 (1,0,0,1)</button>
+                <button type="button" data-grp="one" aria-pressed="false">一枝独秀 (1,0,0,0)</button>
+                <button type="button" data-grp="all" aria-pressed="false">全错 (0,0,0,0)</button>
+            </div>
+            <p class="kv-status" role="status" aria-live="polite"></p>
         </div>
 
         <h2>19.4 规则奖励设计</h2>
@@ -147,7 +217,7 @@ for each prompt in batch:
 
         <p>格式奖励不需要训练，用一段简单的字符串匹配代码就能实现：</p>
 
-        <pre><code>def format_reward(output):
+        <pre style="overflow-x:auto"><code>def format_reward(output):
     reward = 0.0
     # 是否包含推理标记
     if "<think>" in output and "</think>" in output:
@@ -281,13 +351,46 @@ def total_reward(output, ground_truth):
 
         <p>GRPO 是 DeepSeek-R1 家族的基础。有了这个强化学习引擎，下一章我们就要看看 DeepSeek 是如何用它来训练出一代推理之王——从 R1-Zero 的纯 RL 实验，到 R1 的多阶段训练方案。这是一个从"野蛮生长"到"精心培育"的精彩故事，我们继续往下走。</p>
 
+        <h2>19.7 参考文献与延伸</h2>
+        <ul>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2402.03300">DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models</a>（arXiv:2402.03300）——GRPO 算法的最早提出与组内标准化定义。</li>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2501.12948">DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</a>（arXiv:2501.12948）——规则奖励与 GRPO 在大规模推理 RL 上的应用。</li>
+            <li>Schulman et al. <a href="https://arxiv.org/abs/1707.06347">Proximal Policy Optimization Algorithms</a>（arXiv:1707.06347）——作为对照的 PPO 原文。</li>
+        </ul>
+        <p class="note">本章 G=8~64、G=16~32 的经验区间、训练成本降低约 50%、超参 ~15 → ~8 等均引自 DeepSeek 相关论文及本章既有说明；上方沙盘的奖励组为便于演示而设定的<strong>教学示意</strong>。</p>
+
         <div class="footer-nav">
             <a href="18.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="20.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var groups = { pair: [1, 0, 0, 1], one: [1, 0, 0, 0], all: [0, 0, 0, 0] };
+    var eps = 1e-6;
+    var status = document.querySelector('.kv-status');
+    var btns = Array.prototype.slice.call(document.querySelectorAll('.kv-controls button'));
+    if (!status || !btns.length) { return; }
+    function render(key) {
+        var r = groups[key], n = r.length, mu = 0, i;
+        for (i = 0; i < n; i++) { mu += r[i]; }
+        mu /= n;
+        var v = 0;
+        for (i = 0; i < n; i++) { v += (r[i] - mu) * (r[i] - mu); }
+        var sigma = Math.sqrt(v / n);
+        var advantages = r.map(function (ri) { return (ri - mu) / (sigma + eps); });
+        status.textContent = 'μ = ' + mu.toFixed(3) + '，σ = ' + sigma.toFixed(3) + '；A = [' +
+            advantages.map(function (a) { return a.toFixed(2); }).join(', ') + ']。' +
+            (sigma < eps ? '组内奖励完全相同，σ≈0，advantage 全部为 0——没有可比较的相对信号。'
+                         : '高于均值者 A>0，低于均值者 A<0。');
+        btns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.grp === key)); });
+    }
+    btns.forEach(function (b) { b.addEventListener('click', function () { render(b.dataset.grp); }); });
+    render('pair');
+})();
+</script>
 </body>
 </html>

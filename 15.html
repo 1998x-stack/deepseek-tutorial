@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第15章 $5.6M训练671B</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第15章 $5.6M 训练 671B</h1>
+            <p class="dek">2.788M H800 GPU 小时、73.5% MFU、$5.576M——这个数字背后的账怎么算，又靠哪些杠杆压下来。</p>
+        </header>
 
         <p>2024年12月，一篇名为 <em>"DeepSeek-V3 Technical Report"</em> 的论文在 AI 社区投下了一枚重磅炸弹。这篇论文的标题本身并不惊人——每个版本发布都会有一篇技术报告。但当人们看到论文中的成本数字时，几乎所有人都以为自己的眼睛出了问题。</p>
 
@@ -84,10 +87,63 @@
             </tr>
         </table>
 
+        <figure>
+            <svg role="img" aria-labelledby="cost-bars-title cost-bars-desc" viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg">
+                <title id="cost-bars-title">训练总成本对比（对数刻度）</title>
+                <desc id="cost-bars-desc">横轴为训练总成本，取对数刻度（1 / 10 / 100 百万美元）。DeepSeek-V3 约 5.576M 美元，LLaMA 3 405B 与传闻中的 GPT-4 均约 100M 美元以上，约为 V3 的 18 倍。</desc>
+                <rect width="760" height="250" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif" font-size="14">
+                    <text x="16" y="24" font-size="13" fill="#475569">训练总成本对比（百万美元，对数刻度）</text>
+                    <text x="162" y="72" text-anchor="end" fill="#3b0764" font-weight="700">DeepSeek-V3</text>
+                    <rect x="170" y="52" width="180" height="30" rx="6" fill="#a7d4a0" stroke="#5a8f55"/>
+                    <text x="358" y="73" fill="#1f4d33" font-weight="700">$5.576M</text>
+                    <text x="162" y="127" text-anchor="end" fill="#334155">LLaMA 3 405B</text>
+                    <rect x="170" y="107" width="482" height="30" rx="6" fill="#f7b07a" stroke="#c47a3c"/>
+                    <text x="358" y="128" fill="#7c2d12">~$100M+（约 18×）</text>
+                    <text x="162" y="182" text-anchor="end" fill="#334155">GPT-4（传闻）</text>
+                    <rect x="170" y="162" width="482" height="30" rx="6" fill="#f7b07a" stroke="#c47a3c"/>
+                    <text x="358" y="183" fill="#7c2d12">~$100M+（约 18×）</text>
+                    <line x1="170" y1="212" x2="700" y2="212" stroke="#8b5cf6" stroke-width="2"/>
+                    <g font-size="12" fill="#6d28d9" text-anchor="middle">
+                        <text x="170" y="232">1</text><text x="411" y="232">10</text><text x="652" y="232">100</text>
+                    </g>
+                    <g stroke="#8b5cf6" stroke-width="1.5"><line x1="170" y1="212" x2="170" y2="218"/><line x1="411" y1="212" x2="411" y2="218"/><line x1="652" y1="212" x2="652" y2="218"/></g>
+                </g>
+            </svg>
+            <figcaption>V3 与对照模型的总成本量级差约 18 倍。由于差距过大，横轴采用对数刻度（否则 V3 的条形几乎不可见）；数值取自本章 15.1 与 15.5 节的对照表。</figcaption>
+        </figure>
+
+        <div class="math-equation" role="group" aria-label="训练成本与 MFU 的定义公式">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="训练成本与 MFU 公式，可横向滚动">
+                <math display="block" aria-label="总成本 C 等于 GPU 小时数 H 乘单卡小时价格 p；MFU 等于实际达成 FLOPs 除以峰值 FLOPs 乘时间">
+                    <mrow>
+                        <mi>C</mi><mo>=</mo><msub><mi>H</mi><mtext>GPU</mtext></msub><mo>×</mo><msub><mi>p</mi><mtext>hr</mtext></msub>
+                        <mo>,</mo><mo>&#x2003;</mo>
+                        <mtext>MFU</mtext><mo>=</mo>
+                        <mfrac>
+                            <msub><mtext>FLOPs</mtext><mtext>achieved</mtext></msub>
+                            <mrow><msub><mtext>FLOPs</mtext><mtext>peak</mtext></msub><mo>×</mo><mi>T</mi></mrow>
+                        </mfrac>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
         <p>2.664M 小时看起来是个天文数字，但对比一下就知道了——同样配置的训练任务，业界平均 MFU 通常在 40-50% 左右，而 DeepSeek 达到了 73.5% 的 MFU。这意味着他们的硬件利用率比平均水平高出约 50%。等于是同样付了电费房租，DeepSeek 让每块 GPU 干了别人 1.5 倍的活。</p>
 
         <div class="tip">
             <strong>MFU 的意义：</strong>MFU（Model FLOPs Utilization）衡量的是"理论峰值算力中有多少被实际用上了"。100% 意味着每块 GPU 都以纸面峰值算力运行——现实中不可能。DeepSeek 的 73.5% 是非常惊人的数字，很多时候为了达到这个水平，你需要精细地平衡计算、通信和显存三者之间的关系。
+        </div>
+
+        <div class="kv-widget">
+            <p><strong>MFU 换算器：</strong>完成相同计算量时，GPU 小时数与 MFU 成反比。基准取 V3 的 2.788M GPU 小时 / $5.576M（约 $2/GPU-hr）。</p>
+            <div class="kv-controls">
+                <button type="button" data-mfu="0.40" aria-pressed="false">MFU 40%</button>
+                <button type="button" data-mfu="0.50" aria-pressed="false">MFU 50%</button>
+                <button type="button" data-mfu="0.735" aria-pressed="true">MFU 73.5%（V3）</button>
+            </div>
+            <p class="kv-status" role="status" aria-live="polite"></p>
+            <p>此为<strong>教学示意</strong>：只按“同工作量下小时数与 MFU 成反比”简化外推，未计入通信/调度等实际因素。</p>
         </div>
 
         <p>那这 557.6 万美元花在了哪些具体的算力消耗上？我们可以做一个粗略的拆分。14.8T tokens 在 671B 总参数（37B 激活参数）的 MoE 模型上进行训练，总计算量约为 2.8 × 10^23 FLOPs。考虑到 MoE 的路由/通信开销以及 FP8 训练带来的精度开销，实际计算量会略高于理论值，但整体依然保持在一个非常经济的范围内。</p>
@@ -124,7 +180,7 @@
 
         <p>更具体地说，对于 MoE 的 expert dispatch 和 expert combine 操作，DeepSeek 设计了一个 <strong>分组 all-to-all 通信策略</strong>。每个 GPU 只与同一 Plane 内的其他 GPU 进行专家路由通信，Plane 之间的数据聚合通过异步流水线完成。这大幅降低了对 Spine 交换机带宽的需求。</p>
 
-        <pre><code># DeepSeek-V3 集群拓扑示意
+        <pre style="overflow-x:auto"><code># DeepSeek-V3 集群拓扑示意
 #   Plane 0: 节点 0-15  (128 H800 GPUs)
 #   Plane 1: 节点 16-31 (128 H800 GPUs)
 #   ...
@@ -227,7 +283,7 @@
         <h3>细粒度调度</h3>
         <p>除了上述三大技术创新，DeepSeek 在训练调度层面的"抠门"也达到了极致。他们的训练框架会动态监测每块 GPU 的显存使用情况，在显存充足时自动增加 micro-batch size，在显存紧张时及时释放缓存 tensor。这种细粒度的资源调度使得 GPU 显存利用率始终保持在 90% 以上，几乎没有浪费。</p>
 
-        <pre><code># 成本控制四要素总结
+        <pre style="overflow-x:auto"><code># 成本控制四要素总结
 #
 # 1. FP8 混合精度训练: 显存↓50%, 算力↑100%
 # 2. MoE 稀疏架构: 激活参数 37B/671B ≈ 5.5%
@@ -242,13 +298,38 @@
 
         <p>训练成本只是故事的一半。模型训练出来后，真正的挑战在于如何高效地运行它。相比训练阶段的"一次性的高投入"，推理阶段的成本是每天持续发生的。6000 多亿参数的 MoE 模型在推理时面临哪些挑战？如何让它在消费级 GPU 上跑起来？下一章，我们来深入探讨 <strong>DeepSeek-V3 的推理优化体系</strong>。</p>
 
+        <h2>15.7 参考文献与延伸</h2>
+        <ul>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2412.19437">DeepSeek-V3 Technical Report</a>（arXiv:2412.19437）——2.788M H800 GPU 小时、$5.576M 成本与 73.5% MFU 的原始披露。</li>
+            <li>Grattafiori et al. <a href="https://arxiv.org/abs/2407.21783">The Llama 3 Herd of Models</a>（arXiv:2407.21783）——LLaMA 3 405B 的训练规模与成本对照。</li>
+        </ul>
+        <p class="note">本章的 2.664M/2.788M GPU 小时、$5.576M、73.5% MFU、2048 H800 等均引自 DeepSeek-V3 报告及本章既有说明；GPT-4 一行为传闻估值，仅供参考；MFU 换算器为<strong>教学示意</strong>。</p>
+
         <div class="footer-nav">
             <a href="14.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="16.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var baseHours = 2.788, baseMfu = 0.735;
+    var status = document.querySelector('.kv-status');
+    var btns = Array.prototype.slice.call(document.querySelectorAll('.kv-controls button'));
+    if (!status || !btns.length) { return; }
+    function render(raw) {
+        var mfu = parseFloat(raw);
+        var hours = baseHours * baseMfu / mfu;
+        var cost = hours * 2;
+        status.textContent = 'MFU ' + (Math.round(mfu * 1000) / 10) + '% → 约 ' + hours.toFixed(2) +
+            'M GPU-hrs，约 $' + cost.toFixed(2) + 'M（相对 V3 ' + (baseMfu / mfu).toFixed(2) + '×）。';
+        btns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.mfu === raw)); });
+    }
+    btns.forEach(function (b) { b.addEventListener('click', function () { render(b.dataset.mfu); }); });
+    render('0.735');
+})();
+</script>
 </body>
 </html>

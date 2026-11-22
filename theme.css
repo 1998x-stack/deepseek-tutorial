@@ -133,6 +133,11 @@ th {
     background: #fef9c3; border: 1px solid #facc15;
 }
 
+.note {
+    padding: 12px 18px; border-radius: 16px; margin: 15px 0; line-height: 1.7;
+    background: #faf8ff; border-left: 6px solid #a78bfa; color: #3b0764;
+}
+
 /* === Footer Navigation === */
 .footer-nav {
     margin-top: 45px; padding-top: 20px;
@@ -149,7 +154,59 @@ th {
     background: #ede9fe; transform: translateY(-2px);
 }
 
-/* === Responsive === */
+/* === Reading structure, figures and native MathML (DeepSeek chapters) === */
+.skip-link {
+    position: absolute; left: 1rem; top: -4rem; z-index: 20;
+    background: #4c1d95; color: #fff; padding: 0.5rem 1rem;
+    border-radius: 999px; text-decoration: none;
+}
+.skip-link:focus { top: 1rem; }
+.article-header { margin-bottom: 0.5rem; }
+.article-header h1 {
+    color: #4c1d95; font-size: clamp(1.7rem, 3.4vw, 2.2rem);
+    border-left: 6px solid #8b5cf6; padding-left: 15px; margin: 0 0 0.5rem;
+}
+.dek { color: #475569; font-size: 1.02rem; line-height: 1.75; }
+figure {
+    margin: 1.5rem 0; padding: 1rem; background: #ffffff;
+    border: 1px solid #ddd6fe; border-radius: 18px;
+}
+figure svg { width: 100%; height: auto; display: block; }
+figcaption {
+    font-size: 0.83rem; line-height: 1.7; color: #475569;
+    border-top: 1px dashed #ddd6fe; margin-top: 0.7rem; padding-top: 0.5rem;
+}
+.math-equation { margin: 1.4rem 0; padding: 0.7rem 0; border-block: 1px solid #e9e4fd; }
+.math-scroll, [data-math-scroll] {
+    display: block; max-width: 100%; min-width: 0;
+    overflow-x: auto; overflow-y: hidden; scrollbar-width: thin;
+}
+.math-scroll:focus-visible, [data-math-scroll]:focus-visible {
+    outline: 3px solid #7c3aed; outline-offset: 2px;
+}
+.math-scroll math[display="block"], [data-math-scroll] math[display="block"] {
+    width: max-content; min-width: 100%; font-size: clamp(1.02rem, 2.2vw, 1.2rem);
+}
+math.math-inline { font-family: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', serif; }
+.kv-widget { margin: 1.4rem 0; padding: 1rem 1.1rem; background: #faf8ff; border: 1px solid #ddd6fe; border-radius: 16px; }
+.kv-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.7rem 0; }
+.kv-controls button {
+    font: inherit; font-size: 0.9rem; cursor: pointer; padding: 0.4rem 0.9rem;
+    border: 1px solid #c4b5fd; border-radius: 999px; background: #fff; color: #4c1d95;
+}
+.kv-controls button[aria-pressed="true"] { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+.kv-controls button:focus-visible { outline: 3px solid #7c3aed; outline-offset: 2px; }
+.kv-status { min-height: 1.6em; color: #4c1d95; font-weight: 600; line-height: 1.7; }
+@media (max-width: 480px) {
+    .article-header h1 { font-size: 1.5rem; }
+    figure { padding: 0.6rem; }
+}
+@media print {
+    .skip-link { display: none; }
+    figure { break-inside: avoid; }
+    .math-scroll, [data-math-scroll] { overflow: visible; }
+    .math-equation { break-inside: avoid; }
+}
 @media (max-width: 768px) {
     .container { grid-template-columns: 1fr; }
     .sidebar { border-right: none; border-bottom: 2px solid #c4b5fd; }

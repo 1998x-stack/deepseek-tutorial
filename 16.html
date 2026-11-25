@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第16章 推理优化</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第16章 推理优化</h1>
+            <p class="dek">同样是 671B 的 MoE，为什么 DeepSeek 能把价格压到几分之一：MLA 省显存、稀疏推理少读参数、专家并行与 Prefill/Decode 分离把算力和带宽各归其位。</p>
+        </header>
 
         <p>2025 年初，DeepSeek 的 API 服务上线后不久，一个有趣的现象引起了业界的注意。用户发现，DeepSeek-V3 的 API 调用价格仅为 GPT-4 的几十分之一——输入每百万 token $0.27，输出每百万 token $1.10。这是什么概念？同样生成一篇 2000 字的文章，GPT-4 要花你大约 6 美分，而 DeepSeek 只要 0.2 美分。</p>
 
@@ -67,6 +70,44 @@
         <div class="highlight">
             <strong>计算强度公式：</strong>Arithmetic Intensity = FLOPs / Bytes。在 Decode 阶段，FLOPs 很小，但读取参数产生的 Bytes 很大。DeepSeek-V3 作为 MoE 模型，每次推理只读取 37B 激活参数而非 671B 总参数，使得计算强度大幅提升。这也是 MoE 推理的核心优势。
         </div>
+
+        <div class="math-equation" role="group" aria-label="计算强度定义">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="计算强度公式，可横向滚动">
+                <math display="block" aria-label="计算强度 I 等于浮点运算次数 FLOPs 除以内存访问字节数 Bytes">
+                    <mrow>
+                        <mi>I</mi><mo>=</mo>
+                        <mfrac><mi>FLOPs</mi><mi>Bytes</mi></mfrac>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
+        <figure>
+            <svg role="img" aria-labelledby="pd-bottleneck-title pd-bottleneck-desc" viewBox="0 0 760 290" xmlns="http://www.w3.org/2000/svg">
+                <title id="pd-bottleneck-title">Prefill 计算密集与 Decode 带宽密集的瓶颈差异</title>
+                <desc id="pd-bottleneck-desc">左图 Prefill 阶段并行处理全部 prompt token，算力利用率高而显存带宽利用率低，瓶颈在 FLOPs；右图 Decode 阶段每步只生成一个 token，需要读取全部激活参数，算力利用率低而显存带宽利用率高，瓶颈在 HBM 带宽。</desc>
+                <rect width="760" height="290" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif">
+                    <rect x="20" y="40" width="345" height="220" rx="14" fill="#e0f2fe" stroke="#0ea5e9" stroke-width="2"/>
+                    <text x="192" y="70" font-size="14" font-weight="700" fill="#0c4a6e" text-anchor="middle">Prefill：计算密集</text>
+                    <text x="42" y="100" font-size="12" fill="#075985">并行处理全部 N 个 prompt token</text>
+                    <text x="42" y="140" font-size="12" fill="#075985">算力</text>
+                    <rect x="92" y="128" width="240" height="18" rx="6" fill="#7c3aed"/>
+                    <text x="42" y="176" font-size="12" fill="#075985">带宽</text>
+                    <rect x="92" y="164" width="56" height="18" rx="6" fill="#94a3b8"/>
+                    <text x="42" y="222" font-size="12" fill="#0c4a6e">瓶颈：FLOPs；Tensor Core 打满</text>
+                    <rect x="390" y="40" width="345" height="220" rx="14" fill="#fef9c3" stroke="#eab308" stroke-width="2"/>
+                    <text x="562" y="70" font-size="14" font-weight="700" fill="#854d0e" text-anchor="middle">Decode：带宽密集</text>
+                    <text x="412" y="100" font-size="12" fill="#713f12">每步只生成 1 个 token，却要读全部参数</text>
+                    <text x="412" y="140" font-size="12" fill="#713f12">算力</text>
+                    <rect x="462" y="128" width="56" height="18" rx="6" fill="#94a3b8"/>
+                    <text x="412" y="176" font-size="12" fill="#713f12">带宽</text>
+                    <rect x="462" y="164" width="240" height="18" rx="6" fill="#eab308"/>
+                    <text x="412" y="222" font-size="12" fill="#854d0e">瓶颈：HBM 带宽；等待数据搬运</text>
+                </g>
+            </svg>
+            <figcaption>同一个模型，两个阶段瓶颈完全不同：Prefill 把 prompt 一次性并行算完，算力利用率高；Decode 每步只出一个 token，却要把激活参数从 HBM 读一遍，于是卡在带宽上。MoE 只读激活参数（而非全部参数）正是为了抬高 Decode 的计算强度。</figcaption>
+        </figure>
 
         <h2>16.2 MLA 的 KV Cache 节省</h2>
 
@@ -105,6 +146,29 @@
 
         <p>这意味着，128K 上下文的推理任务在 MLA 加持下可以在单张 A100 80G 上完成。而在传统 MHA 下，同样的任务需要至少 7-8 张 GPU 才能装下完整的 KV Cache。MLA 不仅节省了显存，还消除了跨 GPU 传输 KV Cache 的通信开销。这就是为什么 DeepSeek 能把长上下文推理做得这么便宜。</p>
 
+        <div class="math-equation" role="group" aria-label="KV Cache 总大小公式">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="KV Cache 大小公式，可横向滚动">
+                <math display="block" aria-label="KV Cache 总字节数 S 等于 2 乘头数 n_h 乘头维度 d_h 乘字节数 b 乘层数 n_layers 乘序列长度 L">
+                    <mrow>
+                        <mi>S</mi><mo>=</mo>
+                        <mn>2</mn><mo>·</mo><msub><mi>n</mi><mi>h</mi></msub><mo>·</mo><msub><mi>d</mi><mi>h</mi></msub><mo>·</mo><mi>b</mi><mo>·</mo><msub><mi>n</mi><mi>layers</mi></msub><mo>·</mo><mi>L</mi>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
+        <p>其中 <math class="math-inline" aria-label="n_h 为注意力头数"><msub><mi>n</mi><mi>h</mi></msub></math> 是头数，<math class="math-inline" aria-label="d_h 为每头维度"><msub><mi>d</mi><mi>h</mi></msub></math> 是每头维度，<math class="math-inline" aria-label="b 为每元素字节数"><mi>b</mi></math> 是每元素字节数，<math class="math-inline" aria-label="L 为序列长度"><mi>L</mi></math> 是序列长度。MHA 的 KV Cache 随 L 线性增长；MLA 缓存的是低维潜向量，相当于把每 token 的系数大幅调低。</p>
+
+        <div class="kv-widget">
+            <p><strong>KV Cache 沙盘：</strong>取每 token 的 KV Cache 大小为传统 MHA ≈ 3.9 MB、MLA ≈ 0.3 MB（<strong>教学示意</strong>，源自 16.2 节估算），切换上下文长度估算总量。</p>
+            <div class="kv-controls">
+                <button type="button" id="kv-4k" aria-pressed="false">4K</button>
+                <button type="button" id="kv-32k" aria-pressed="false">32K</button>
+                <button type="button" id="kv-128k" aria-pressed="true">128K</button>
+            </div>
+            <p class="kv-status" id="kv-status" role="status" aria-live="polite"></p>
+        </div>
+
         <h2>16.3 MoE 稀疏推理</h2>
 
         <p>MoE 架构在推理时带来的最大好处是：<strong>虽然模型有 671B 参数，但每次推理只加载 37B 参数。</strong></p>
@@ -133,7 +197,7 @@
             <li>类似操作系统的"进程迁移"，但粒度是"专家"而非"进程"</li>
         </ul>
 
-        <pre><code># 动态专家并行伪代码
+        <pre style="overflow-x:auto"><code># 动态专家并行伪代码
 # 输入: token 集合 T, 专家集合 E 分布在 N 个 GPU 上
 #
 # 1. 每个 GPU 统计本地专家的路由计数
@@ -179,7 +243,7 @@
             <li><strong>优先级队列</strong>：对延迟敏感的交互式请求（如聊天）获得较高优先级，对吞吐敏感的批处理请求（如离线评估）置于较低优先级队列。</li>
         </ul>
 
-        <pre><code># Continuous Batching 流程
+        <pre style="overflow-x:auto"><code># Continuous Batching 流程
 # 初始: batch = [req1, req2, req3]
 #
 # Step 1: 对 batch 中所有请求做 Decode，各生成 1 token
@@ -196,13 +260,48 @@
 
         <p>推理优化的目的是让模型跑得更快更便宜。但还有一个维度能让模型"跑得更轻"——那就是对模型本身进行压缩。下一章，我们来聊 <strong>量化压缩</strong>：如何用 FP8、FP4 甚至 INT4 的精度，让大模型在消费级显卡上流畅运行。</p>
 
+        <h2>16.7 参考文献与延伸</h2>
+        <ul>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2405.04434">DeepSeek-V2</a>（arXiv:2405.04434）——MLA 的低秩压缩与 KV Cache 节省分析。</li>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2412.19437">DeepSeek-V3 Technical Report</a>（arXiv:2412.19437）——MLA/MoE 的推理效率与部署设计。</li>
+            <li>Kwon et al. <a href="https://arxiv.org/abs/2309.06180">PagedAttention / vLLM</a>（arXiv:2309.06180）——分页 KV Cache 与 Continuous Batching。</li>
+        </ul>
+        <p class="note">本章 MLA 节省约 92%、128K KV Cache 从约 500 GB 降至约 38 GB 的估算沿用本课程第 8 章与 DeepSeek 公开材料；“动态专家并行 P99 −40% / 吞吐 +30%”“单节点吞吐为 dense 模型 8–10 倍”等效果数字为便于教学的<strong>示意</strong>，未经官方逐项披露；KV Cache 沙盘的每 token 大小为教学近似值。</p>
+
         <div class="footer-nav">
             <a href="15.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="17.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var perToken = { 'kv-4k': [3.9, 0.3], 'kv-32k': [3.9, 0.3], 'kv-128k': [3.9, 0.3] };
+    var lens = { 'kv-4k': 4096, 'kv-32k': 32768, 'kv-128k': 128000 };
+    var labels = { 'kv-4k': '4K', 'kv-32k': '32K', 'kv-128k': '128K' };
+    var ids = ['kv-4k', 'kv-32k', 'kv-128k'];
+    var status = document.getElementById('kv-status');
+    if (!status) { return; }
+    function render(key) {
+        for (var i = 0; i < ids.length; i++) {
+            var b = document.getElementById(ids[i]);
+            if (b) { b.setAttribute('aria-pressed', ids[i] === key ? 'true' : 'false'); }
+        }
+        var L = lens[key];
+        var mha = perToken[key][0] * L / 1024;
+        var mla = perToken[key][1] * L / 1024;
+        status.textContent = '上下文 ' + labels[key] + '：传统 MHA ≈ ' + mha.toFixed(1) + ' GB，MLA ≈ ' + mla.toFixed(1) + ' GB，节省约 ' + Math.round((1 - mla / mha) * 100) + '%。';
+    }
+    for (var i = 0; i < ids.length; i++) {
+        (function (key) {
+            var b = document.getElementById(key);
+            if (b) { b.addEventListener('click', function () { render(key); }); }
+        })(ids[i]);
+    }
+    render('kv-128k');
+})();
+</script>
 </body>
 </html>

@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第22章 DeepSeek-Math</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第22章 DeepSeek-Math</h1>
+            <p class="dek">模型不是在“算数学”，而是在模仿训练分布：DeepSeek-Math 用百万级分步推理语料和三阶段训练，把符号推理与多步推理能力炼出来。</p>
+        </header>
 
         <p>2023 年，一群来自 MIT 的研究人员做了一个简单实验：他们把 GPT-4 和几个开源模型叫到一起，出了一道小学五年级的数学题——"小明有 15 个苹果，给了小红 3 个，又买了 8 个，他现在有多少个？"结果让人大跌眼镜——多个模型给出了错误的答案，有的甚至做了完全无关的计算。最有趣的是，当你追问这些模型的推理过程时，它们常常给出"正确的推理"但"错误的答案"，或者"错误的推理"但"正确的答案"。</p>
 
@@ -150,7 +153,35 @@
         <p><strong>第三阶段：数学微调（Math SFT）</strong></p>
         <p>在继续预训练之后，使用高质量的数学推理数据做监督微调。微调数据全部包含完整的分步推理链（Chain-of-Thought）。这一阶段的目标是教会模型"如何正确输出推理过程"。</p>
 
-        <pre><code># 训练数据格式示例
+        <figure>
+            <svg role="img" aria-labelledby="math-stage-title math-stage-desc" viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg">
+                <title id="math-stage-title">DeepSeek-Math 的三阶段训练</title>
+                <desc id="math-stage-desc">先用通用预训练基座提供语言与世界知识，再用百万级数学语料做低学习率的数学继续预训练，最后用含完整分步推理链的数据做数学监督微调。</desc>
+                <rect width="760" height="250" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif" text-anchor="middle">
+                    <rect x="20" y="62" width="210" height="86" rx="12" fill="#ede9fe" stroke="#8b5cf6"/>
+                    <text x="125" y="94" font-size="13" font-weight="700" fill="#3b0764">① 通用预训练</text>
+                    <text x="125" y="116" font-size="12" fill="#5b21b6">语言理解与世界知识</text>
+                    <text x="125" y="134" font-size="12" fill="#5b21b6">（DeepSeek-LLM 基座）</text>
+                    <rect x="270" y="62" width="210" height="86" rx="12" fill="#e0f2fe" stroke="#0ea5e9" stroke-width="2"/>
+                    <text x="375" y="94" font-size="13" font-weight="700" fill="#0c4a6e">② 数学继续预训练</text>
+                    <text x="375" y="116" font-size="12" fill="#075985">低学习率，防遗忘</text>
+                    <text x="375" y="134" font-size="12" fill="#075985">数学占比 10% → 50%</text>
+                    <rect x="520" y="62" width="210" height="86" rx="12" fill="#fef9c3" stroke="#eab308" stroke-width="2"/>
+                    <text x="625" y="94" font-size="13" font-weight="700" fill="#854d0e">③ 数学 SFT</text>
+                    <text x="625" y="116" font-size="12" fill="#713f12">完整分步推理链</text>
+                    <text x="625" y="134" font-size="12" fill="#713f12">（Chain-of-Thought）</text>
+                    <g stroke="#7c3aed" stroke-width="2.5" fill="none" marker-end="url(#ms-arrow)">
+                        <path d="M232 105 H268"/><path d="M482 105 H518"/>
+                    </g>
+                    <text x="380" y="196" font-size="12" fill="#64748b">先借通用预训练的知识，再做数学专项训练——据报告比从零训练节省约 60% 算力</text>
+                    <defs><marker id="ms-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 z" fill="#7c3aed"/></marker></defs>
+                </g>
+            </svg>
+            <figcaption>三阶段的顺序有讲究：先在通用语料上拿到语言与世界知识，再用低学习率、逐步提高数学占比的方式做继续预训练，最后用完整的分步推理链做 SFT。阶段划分与学习率/占比设置见 22.3 节及 DeepSeekMath 报告。</figcaption>
+        </figure>
+
+        <pre style="overflow-x:auto"><code># 训练数据格式示例
 {
   "problem": "一个等差数列的首项为 3，公差为 4，求第 10 项的值。",
   "reasoning": [
@@ -162,6 +193,30 @@
   "difficulty": "easy",
   "source": "math_textbook_v2"
 }</code></pre>
+
+        <div class="math-equation" role="group" aria-label="等差数列通项公式">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="等差数项公式，可横向滚动">
+                <math display="block" aria-label="等差数列第 n 项 a_n 等于首项 a_1 加上 n 减 1 乘以公差 d">
+                    <mrow>
+                        <msub><mi>a</mi><mi>n</mi></msub><mo>=</mo>
+                        <msub><mi>a</mi><mn>1</mn></msub><mo>+</mo>
+                        <mo>(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo>)</mo><mi>d</mi>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
+        <p>上面例子中的推理链就是套用这个公式：首项 <math class="math-inline" aria-label="a_1 等于 3"><msub><mi>a</mi><mn>1</mn></msub><mo>=</mo><mn>3</mn></math>，公差 <math class="math-inline" aria-label="d 等于 4"><mi>d</mi><mo>=</mo><mn>4</mn></math>，代入 n 即可求第 n 项。</p>
+
+        <div class="kv-widget">
+            <p><strong>等差数列沙盘：</strong>固定首项 a₁ = 3、公差 d = 4（对应上文例题），切换项数 n，按通项公式输出第 n 项（<strong>教学示意</strong>）。</p>
+            <div class="kv-controls">
+                <button type="button" id="ap-10" aria-pressed="true">n=10</button>
+                <button type="button" id="ap-20" aria-pressed="false">n=20</button>
+                <button type="button" id="ap-50" aria-pressed="false">n=50</button>
+            </div>
+            <p class="kv-status" id="ap-status" role="status" aria-live="polite"></p>
+        </div>
 
         <p>这个三阶段策略与"从零开始训练一个数学模型"的区别在于：它充分利用了通用预训练积累的知识和语言能力，再通过数学专项训练来激发推理潜力。DeepSeek 的实验表明，这种方法比从零训练节省了约 60% 的总计算量。</p>
 
@@ -234,7 +289,7 @@
 
         <p><strong>定理证明</strong>——DeepSeek-Math 尝试使用 <strong>Prover 验证</strong> 来提升推理的严谨性。具体来说，模型生成的数学证明被送入定理证明器（如 Lean、Coq）进行形式化验证。如果证明通过，说明推理链是正确的；如果不通过，这可以作为负反馈信号来改进模型。</p>
 
-        <pre><code># 使用 Lean 定理证明器验证模型生成的数学证明
+        <pre style="overflow-x:auto"><code># 使用 Lean 定理证明器验证模型生成的数学证明
 # 模型输出：a² + b² ≥ 2ab 的证明
 
 theorem am_gm_sq (a b : ℝ) : a^2 + b^2 ≥ 2*a*b :=
@@ -311,13 +366,46 @@ by
 
         <p>接下来，我们将从训练和评估进入更实操的环节。下一章开始，我们会讨论<strong>如何将 DeepSeek 模型部署到本地环境</strong>，让你亲手运行这些强大但又高效的模型。</p>
 
+        <h2>22.7 参考文献与延伸</h2>
+        <ul>
+            <li>Shao et al. <a href="https://arxiv.org/abs/2402.03300">DeepSeekMath</a>（arXiv:2402.03300）——百万级数学语料、三阶段训练与 GSM8K/MATH 结果。</li>
+            <li>Cobbe et al. <a href="https://arxiv.org/abs/2110.14168">GSM8K</a>（arXiv:2110.14168）——小学数学多步推理基准。</li>
+            <li>Hendrycks et al. <a href="https://arxiv.org/abs/2103.03874">MATH</a>（arXiv:2103.03874）——更具难度的数学推理基准。</li>
+        </ul>
+        <p class="note">本章的百万级语料、分步推理标注、三阶段训练与形式化验证方向引自 DeepSeekMath 技术报告；22.4 的 GSM8K/MATH 对照表与 22.6 的数学继续预训练消融表沿用本课程既有整理，属<strong>示意对照</strong>，具体数值应以 DeepSeekMath 报告为准；沙盘与例题中的 a₁=3、d=4 为教学设定。</p>
+
         <div class="footer-nav">
             <a href="21.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="23.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var a1 = 3, d = 4;
+    var ns = { 'ap-10': 10, 'ap-20': 20, 'ap-50': 50 };
+    var ids = ['ap-10', 'ap-20', 'ap-50'];
+    var status = document.getElementById('ap-status');
+    if (!status) { return; }
+    function render(key) {
+        for (var i = 0; i < ids.length; i++) {
+            var b = document.getElementById(ids[i]);
+            if (b) { b.setAttribute('aria-pressed', ids[i] === key ? 'true' : 'false'); }
+        }
+        var n = ns[key];
+        var an = a1 + (n - 1) * d;
+        status.textContent = 'a₁=' + a1 + '，d=' + d + '；n=' + n + ' 时 a_n = ' + a1 + ' + (' + n + '−1)×' + d + ' = ' + an + '。';
+    }
+    for (var i = 0; i < ids.length; i++) {
+        (function (key) {
+            var b = document.getElementById(key);
+            if (b) { b.addEventListener('click', function () { render(key); }); }
+        })(ids[i]);
+    }
+    render('ap-10');
+})();
+</script>
 </body>
 </html>

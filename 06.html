@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第6章 MoE 架构入门</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第6章 MoE 架构入门</h1>
+            <p class="dek">MoE 用稀疏激活解耦了“模型容量”与“单次计算量”：总参数可以很大，但每个 token 只调用少数专家。</p>
+        </header>
 
         <p>大家好，欢迎回到 DeepSeek 系列教程。从本章开始，我们将进入一个全新的技术领域——<strong>MoE（Mixture of Experts，混合专家）架构</strong>。这是我们整个课程的一个关键转折点。</p>
 
@@ -67,6 +70,42 @@
         </ul>
 
         <p>核心 insight：<strong>模型的"容量"由总参数量决定（决定了能记住多少知识），但每次推理的"计算成本"由激活参数量决定。</strong>MoE 就是通过解耦这两个维度，实现了"大容量、小计算"的优雅平衡。</p>
+
+        <figure>
+            <svg role="img" aria-labelledby="dense-sparse-title dense-sparse-desc" viewBox="0 0 760 270" xmlns="http://www.w3.org/2000/svg">
+                <title id="dense-sparse-title">稠密模型与稀疏 MoE 的激活范围对比</title>
+                <desc id="dense-sparse-desc">左图稠密模型：每个 token 都经过同一整层 FFN，全部参数参与计算。右图 MoE：路由网络为每个 token 只选亮两个专家，其余专家关闭，因此总参数很大而单次计算量很小。</desc>
+                <rect width="760" height="270" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif" text-anchor="middle">
+                    <text x="185" y="32" font-size="15" font-weight="700" fill="#4c1d95">稠密：全激活</text>
+                    <rect x="45" y="52" width="80" height="46" rx="10" fill="#ede9fe" stroke="#8b5cf6"/>
+                    <text x="85" y="80" font-size="13" fill="#3b0764">token</text>
+                    <rect x="165" y="42" width="170" height="66" rx="12" fill="#c4b5fd" stroke="#8b5cf6" stroke-width="2"/>
+                    <text x="250" y="70" font-size="13" fill="#3b0764">FFN（全部参数）</text>
+                    <text x="250" y="90" font-size="11" fill="#4c1d95">计算量 = 参数量</text>
+                    <path d="M127 75 H163" stroke="#7c3aed" stroke-width="2.5" marker-end="url(#ds-arrow)"/>
+                    <text x="185" y="150" font-size="12" fill="#64748b">容量与算力绑定</text>
+                    <text x="565" y="32" font-size="15" font-weight="700" fill="#4c1d95">MoE：稀疏激活</text>
+                    <rect x="400" y="52" width="70" height="46" rx="10" fill="#ede9fe" stroke="#8b5cf6"/>
+                    <text x="435" y="80" font-size="13" fill="#3b0764">token</text>
+                    <rect x="495" y="52" width="110" height="46" rx="10" fill="#fef9c3" stroke="#eab308" stroke-width="2"/>
+                    <text x="550" y="72" font-size="12" fill="#713f12">路由 Top-K</text>
+                    <text x="550" y="89" font-size="11" fill="#713f12">只看分数</text>
+                    <path d="M472 75 H493" stroke="#7c3aed" stroke-width="2.5" marker-end="url(#ds-arrow)"/>
+                    <g font-size="11">
+                        <rect x="648" y="30" width="86" height="34" rx="9" fill="#c4b5fd" stroke="#8b5cf6" stroke-width="2"/><text x="691" y="52" fill="#3b0764">专家 A</text>
+                        <rect x="648" y="72" width="86" height="34" rx="9" fill="#f5f3ff" stroke="#ddd6fe"/><text x="691" y="94" fill="#a1a1aa">专家 B</text>
+                        <rect x="648" y="114" width="86" height="34" rx="9" fill="#c4b5fd" stroke="#8b5cf6" stroke-width="2"/><text x="691" y="136" fill="#3b0764">专家 C</text>
+                        <rect x="648" y="156" width="86" height="34" rx="9" fill="#f5f3ff" stroke="#ddd6fe"/><text x="691" y="178" fill="#a1a1aa">专家 D</text>
+                    </g>
+                    <path d="M607 66 L646 47" stroke="#7c3aed" stroke-width="2" marker-end="url(#ds-arrow)"/>
+                    <path d="M607 84 L646 131" stroke="#7c3aed" stroke-width="2" marker-end="url(#ds-arrow)"/>
+                    <text x="565" y="222" font-size="12" fill="#64748b">容量 ≫ 算力（此处 K=2）</text>
+                    <defs><marker id="ds-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 z" fill="#7c3aed"/></marker></defs>
+                </g>
+            </svg>
+            <figcaption>左：稠密模型每个 token 都点亮整层参数。右：MoE 的路由只根据分数选出 Top-K 个专家（图中高亮的 A、C），其余专家保持关闭。同一份总知识，单次前向真正参与计算的专家数远小于总数——这就是“容量与算力解耦”。</figcaption>
+        </figure>
 
         <table>
             <tr>
@@ -107,7 +146,7 @@
 
         <p>在 Transformer 架构中，MoE 通常替代 FFN（前馈神经网络）层。一个标准的 MoE 层由以下部分组成：</p>
 
-        <pre><code>MoE 层的结构:
+        <pre style="overflow-x:auto"><code>MoE 层的结构:
 
 输入: x (shape: [batch, seq_len, d_model])
 
@@ -140,7 +179,7 @@
 
         <p>门控网络（Router）是 MoE 的"大脑"——它决定了每个 token 去哪个专家。最常见的路由机制是 <strong>Top-K 门控</strong>。</p>
 
-        <pre><code>Top-K 门控的数学实现:
+        <pre style="overflow-x:auto"><code>Top-K 门控的数学实现:
 
 1. 计算 token x 与每个专家 e_i 的"匹配度"
    score_i = x · W_gate[:, i]    (点积相似度)
@@ -155,6 +194,23 @@
 4. 加权组合选中的专家输出
    output = Σ_{i in topk_indices} gate_weights_i × Expert_i(x)</code></pre>
 
+        <div class="math-equation" role="group" aria-label="Top-K 门控的选择与加权公式">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="Top-K 门控公式，可横向滚动">
+                <math display="block" aria-label="门控权重 g_i 等于 exp s_i 除以 TopK 集合内 exp s_j 之和；当 i 不在 TopK 内时 g_i 为零">
+                    <mrow>
+                        <msub><mi>g</mi><mi>i</mi></msub><mo>=</mo>
+                        <mfrac>
+                            <mrow><mi>exp</mi><mo>(</mo><msub><mi>s</mi><mi>i</mi></msub><mo>)</mo></mrow>
+                            <mrow><munder><mo>∑</mo><mrow><mi>j</mi><mo>∈</mo><mi>TopK</mi></mrow></munder><mi>exp</mi><mo>(</mo><msub><mi>s</mi><mi>j</mi></msub><mo>)</mo></mrow>
+                        </mfrac>
+                        <mo>,</mo><mo>&#x2003;</mo>
+                        <msub><mi>g</mi><mi>i</mi></msub><mo>=</mo><mn>0</mn>
+                        <mo>&#x2003;</mo><mo>(</mo><mi>i</mi><mo>∉</mo><mi>TopK</mi><mo>)</mo>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
         <p>在训练中，门控网络的权重通过反向传播进行学习——它能自动学会将相似的 token 路由到相同的专家。经过充分训练后，不同的专家会自发地"专业化"：比如一个专家擅长处理数学问题，另一个擅长处理语法问题，第三个擅长处理代码。</p>
 
         <p>Top-K 的 K 值选择是一个超参数：</p>
@@ -166,6 +222,16 @@
 
         <div class="tip">
             <strong>一个直观理解：</strong>为什么 K=2 比 K=1 好？想象你去看病，K=1 意味着只看一个医生——但如果这个医生恰好不擅长你这个病呢？K=2 意味着你可以同时咨询两个医生，一个主诊、一个会诊。即使你主要相信第一个医生的意见（weight 更高），第二个医生也能提供补充信息。这就是为什么绝大多数 MoE 模型选择 K=2。
+        </div>
+
+        <div class="kv-widget">
+            <p><strong>Top-K 门控沙盘：</strong>4 个专家与 token 的亲和度分数为 s = [3.2, 1.0, 2.4, 0.5]（<strong>教学示意</strong>）。切换 K，观察哪些专家被选中，以及门控权重如何只在选中的专家之间做 softmax 归一化。</p>
+            <div class="kv-controls">
+                <button type="button" id="tk-k1" aria-pressed="false">K=1</button>
+                <button type="button" id="tk-k2" aria-pressed="true">K=2</button>
+                <button type="button" id="tk-k3" aria-pressed="false">K=3</button>
+            </div>
+            <p class="kv-status" id="tk-status" role="status" aria-live="polite"></p>
         </div>
 
         <h2>6.4 负载均衡挑战</h2>
@@ -181,7 +247,7 @@
 
         <p>解决负载均衡问题的标准方法是在训练损失中添加<strong>辅助负载均衡损失（Auxiliary Load Balancing Loss）</strong>。最常见的形式是：</p>
 
-        <pre><code>辅助负载均衡损失:
+        <pre style="overflow-x:auto"><code>辅助负载均衡损失:
 
 L_aux = α × num_experts × Σ_{i=1}^{num_experts} (f_i × P_i)
 
@@ -207,6 +273,7 @@ L_aux = α × num_experts × Σ_{i=1}^{num_experts} (f_i × P_i)
 
         <p>在进入 DeepSeekMoE 之前，让我们快速回顾几个在 MoE 发展史上具有里程碑意义的模型：</p>
 
+        <div style="overflow-x:auto">
         <table>
             <tr>
                 <th>模型</th>
@@ -249,6 +316,7 @@ L_aux = α × num_experts × Σ_{i=1}^{num_experts} (f_i × P_i)
                 <td>共享专家 + 细粒度切分，我们下章细说</td>
             </tr>
         </table>
+        </div>
 
         <p>特别值得一提的是 <strong>Mixtral 8x7B</strong>——它在 2023 年底发布，是 Mystral AI 对 MoE 的一次"出圈"级的贡献。Mixtral 8x7B 虽然总参数量是 47B（8 × 7B 减去一些共享参数），但每 token 只激活 2 个专家，推理计算量只相当于 13B 的稠密模型。而它的性能在几乎所有评测上都超过了 LLaMA 2 70B——用 13B 级别的计算量击败了 70B 稠密模型。正是 Mixtral 让整个业界重新认识到 MoE 的潜力。</p>
 
@@ -284,13 +352,55 @@ L_aux = α × num_experts × Σ_{i=1}^{num_experts} (f_i × P_i)
 
         <p>下一章，我们就进入 DeepSeek 最核心的架构创新之一——<strong>DeepSeekMoE</strong>。你将看到共享专家与路由专家的分离、细粒度专家切分、以及三层次负载均衡这些独创设计是如何让 MoE 发挥出更大潜力的。敬请期待。</p>
 
+        <h2>6.7 参考文献与延伸</h2>
+        <ul>
+            <li>Jacobs et al. <a href="https://doi.org/10.1162/neco.1991.3.1.79">Adaptive Mixtures of Local Experts</a>（Neural Computation, 1991）——MoE 思想的最早来源。</li>
+            <li>Lepikhin et al. <a href="https://arxiv.org/abs/2006.16668">GShard</a>（arXiv:2006.16668）——把 MoE 用于 Transformer 与专家切分的里程碑。</li>
+            <li>Fedus et al. <a href="https://arxiv.org/abs/2101.03961">Switch Transformers</a>（arXiv:2101.03961）——Top-1 路由与稀疏预训练。</li>
+            <li>Jiang et al. <a href="https://arxiv.org/abs/2401.04088">Mixtral of Experts</a>（arXiv:2401.04088）——开源高性能 MoE 的代表。</li>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2401.06066">DeepSeekMoE</a>（arXiv:2401.06066）——共享专家与细粒度切分，见下一章。</li>
+        </ul>
+        <p class="note">本章的稠密/稀疏对比与 Top-K 门控为原理性讲解；表中“每 token 计算量仅为稠密的 30–50%”是常见工程经验下的<strong>教学示意</strong>，具体取值随专家数、Top-K 与实现而异；沙盘中的亲和度分数为演示而设，非任何模型的真实数值。</p>
+
         <div class="footer-nav">
             <a href="05.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="07.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var scores = [3.2, 1.0, 2.4, 0.5];
+    var labels = ['E1', 'E2', 'E3', 'E4'];
+    var current = 2;
+    var status = document.getElementById('tk-status');
+    if (!status) { return; }
+    var buttons = [document.getElementById('tk-k1'), document.getElementById('tk-k2'), document.getElementById('tk-k3')];
+    function render() {
+        var order = scores.map(function (s, i) { return [s, i]; }).sort(function (a, b) { return b[0] - a[0]; });
+        var denom = 0;
+        for (var i = 0; i < current; i++) { denom += Math.exp(order[i][0]); }
+        var parts = [];
+        for (var i = 0; i < order.length; i++) {
+            var w = i < current ? (Math.exp(order[i][0]) / denom).toFixed(3) : '0';
+            parts.push(labels[order[i][1]] + '=' + w);
+        }
+        status.textContent = 'K=' + current + '：' + parts.join('，') + '。';
+    }
+    function setK(k, btn) {
+        current = k;
+        for (var i = 0; i < buttons.length; i++) {
+            if (buttons[i]) { buttons[i].setAttribute('aria-pressed', buttons[i] === btn ? 'true' : 'false'); }
+        }
+        render();
+    }
+    if (buttons[0]) { buttons[0].addEventListener('click', function () { setK(1, buttons[0]); }); }
+    if (buttons[1]) { buttons[1].addEventListener('click', function () { setK(2, buttons[1]); }); }
+    if (buttons[2]) { buttons[2].addEventListener('click', function () { setK(3, buttons[2]); }); }
+    render();
+})();
+</script>
 </body>
 </html>

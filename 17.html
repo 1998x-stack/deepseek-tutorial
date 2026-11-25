@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第17章 量化压缩</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第17章 量化压缩</h1>
+            <p class="dek">用更少的比特表示权重：从原生 FP8 到 FP4 QAT，再到社区的 AWQ / GPTQ / GGUF，量化把 671B 模型的部署门槛从一柜 GPU 降到一张消费级显卡。</p>
+        </header>
 
         <p>2025 年初，一位开源爱好者在 GitHub 上展示了这样一幕：他用一块 RTX 3090（24GB 显存），成功运行了 DeepSeek-V3——一个 671B 参数的模型。评论区炸了。有人质疑这是造假，有人惊呼魔法诞生，更多的人在问同一个问题：<strong>"24GB 的卡怎么能装下 671B 的参数？"</strong></p>
 
@@ -104,6 +107,46 @@
             </tr>
         </table>
 
+        <div class="math-equation" role="group" aria-label="仿射量化与反量化公式">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="量化公式，可横向滚动">
+                <math display="block" aria-label="量化：x_int 等于将 x 除以 s 四舍五入后加零点 z，再截断到 0 到 2 的 b 次方减 1；反量化 x 帽等于 s 乘以 x_int 减 z">
+                    <mrow>
+                        <msub><mi>x</mi><mi>int</mi></msub><mo>=</mo>
+                        <mi>clip</mi><mo>(</mo><mi>round</mi><mo>(</mo><mfrac><mi>x</mi><mi>s</mi></mfrac><mo>)</mo><mo>+</mo><mi>z</mi><mo>,</mo><mn>0</mn><mo>,</mo><msup><mn>2</mn><mi>b</mi></msup><mo>−</mo><mn>1</mn><mo>)</mo>
+                        <mo>,</mo><mo>&#x2003;</mo>
+                        <mover><mi>x</mi><mo>^</mo></mover><mo>=</mo>
+                        <mi>s</mi><mo>·</mo><mo>(</mo><msub><mi>x</mi><mi>int</mi></msub><mo>−</mo><mi>z</mi><mo>)</mo>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
+        <p>其中 <math class="math-inline" aria-label="s 为缩放因子"><mi>s</mi></math> 是缩放因子（scale），<math class="math-inline" aria-label="z 为零点"><mi>z</mi></math> 是零点（zero-point），<math class="math-inline" aria-label="b 为比特数"><mi>b</mi></math> 是比特数。比特数 b 越小，可选格点越稀，表示误差越大。</p>
+
+        <figure>
+            <svg role="img" aria-labelledby="quant-grid-title quant-grid-desc" viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+                <title id="quant-grid-title">量化把连续值吸附到离散格点，再反量化近似恢复</title>
+                <desc id="quant-grid-desc">三行图示：第一行原始权重是连续值，圆点落在任意位置；第二行量化后圆点被吸附到固定的格点上；第三行反量化用缩放因子把格点换回近似原值，与原始值存在量化误差。</desc>
+                <rect width="760" height="260" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif">
+                    <text x="30" y="34" font-size="13" font-weight="700" fill="#4c1d95">① 原始权重 x（连续）</text>
+                    <line x1="200" y1="36" x2="620" y2="36" stroke="#cbd5e1"/>
+                    <g fill="#7c3aed"><circle cx="250" cy="36" r="6"/><circle cx="330" cy="36" r="6"/><circle cx="415" cy="36" r="6"/><circle cx="500" cy="36" r="6"/><circle cx="575" cy="36" r="6"/></g>
+                    <text x="30" y="116" font-size="13" font-weight="700" fill="#0c4a6e">② 量化：x_int = round(x/s)+z</text>
+                    <line x1="200" y1="118" x2="620" y2="118" stroke="#cbd5e1"/>
+                    <g stroke="#0ea5e9" stroke-width="2"><line x1="280" y1="106" x2="280" y2="130"/><line x1="390" y1="106" x2="390" y2="130"/><line x1="500" y1="106" x2="500" y2="130"/><line x1="610" y1="106" x2="610" y2="130"/></g>
+                    <g fill="#0ea5e9"><circle cx="280" cy="118" r="6"/><circle cx="280" cy="118" r="6"/><circle cx="390" cy="118" r="6"/><circle cx="500" cy="118" r="6"/><circle cx="610" cy="118" r="6"/></g>
+                    <text x="30" y="198" font-size="13" font-weight="700" fill="#854d0e">③ 反量化 x̂ = s·(x_int−z)（近似恢复）</text>
+                    <line x1="200" y1="200" x2="620" y2="200" stroke="#cbd5e1"/>
+                    <g fill="#eab308"><circle cx="280" cy="200" r="6"/><circle cx="390" cy="200" r="6"/><circle cx="500" cy="200" r="6"/><circle cx="610" cy="200" r="6"/></g>
+                    <g stroke="#7c3aed" stroke-width="2.5" fill="none" marker-end="url(#q-arrow)"><path d="M170 50 V100"/><path d="M170 132 V182"/></g>
+                    <text x="200" y="243" font-size="12" fill="#64748b">格点越稀（b 越小），吸附造成的量化误差越大——这正是低比特量化的代价。</text>
+                    <defs><marker id="q-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 z" fill="#7c3aed"/></marker></defs>
+                </g>
+            </svg>
+            <figcaption>量化的三步：连续权重先被“吸附”到最近的可表示格点（比特数决定格点密度），数值以整数 <math class="math-inline" aria-label="x_int"><msub><mi>x</mi><mi>int</mi></msub></math> 存储，推理时再用缩放因子 s 与零点 z 还原。图中格点密度为示意，真实 FP8/INT4 的取值集合见 17.1 节表格。</figcaption>
+        </figure>
+
         <div class="warning">
             <strong>注意：</strong>量化并非没有代价。随着比特数的减少，模型在某些任务上的表现会逐渐退化。关键是要找到"甜点"——在可接受的性能损失范围内最大化压缩比。对于不同的模型架构和任务，这个甜点各不相同。
         </div>
@@ -122,7 +165,7 @@
             <li><strong>计算加速</strong>：H800/H100 的 FP8 Tensor Core 峰值算力是 FP16 的两倍（1979 vs 989 TFLOPS），在 Prefill 阶段带来显著加速</li>
         </ul>
 
-        <pre><code># FP8 推理的显存需求示意
+        <pre style="overflow-x:auto"><code># FP8 推理的显存需求示意
 # 原始参数 (FP32): 671B × 4 bytes = 2.68 TB   ❌ 不可能
 # 训练/推理 (BF16): 671B × 2 bytes = 1.34 TB   ❌ 太大
 # FP8 模型权重:     671B × 1 byte  = 671 GB     ⚠️ 仍然大但合理
@@ -130,6 +173,17 @@
 
         <div class="tip">
             <strong>关于 MoE 的显存计算：</strong>虽然激活参数只有 37B，但整个模型的所有专家参数都需要存储在（分布式）显存中，因为不同 token 可能路由到不同的专家。FP8 让你用 671 GB 存储所有参数，而不是 1.34 TB。对于多卡推理场景，这大幅降低了对 GPU 数量和网络带宽的需求。
+        </div>
+
+        <div class="kv-widget">
+            <p><strong>量化体积沙盘：</strong>固定参数量为 671B（<strong>教学示意</strong>），切换精度，观察存储全部权重所需的显存。注意 MoE 推理时虽只激活 37B，但所有专家参数都要存储。</p>
+            <div class="kv-controls">
+                <button type="button" id="qb-32" aria-pressed="false">FP32</button>
+                <button type="button" id="qb-16" aria-pressed="false">BF16</button>
+                <button type="button" id="qb-8" aria-pressed="true">FP8</button>
+                <button type="button" id="qb-4" aria-pressed="false">INT4</button>
+            </div>
+            <p class="kv-status" id="qb-status" role="status" aria-live="polite"></p>
         </div>
 
         <h2>17.3 FP4 QAT（量化感知训练）</h2>
@@ -198,7 +252,7 @@
         <h3>GGUF</h3>
         <p>GGUF 是 llama.cpp 项目定义的模型格式，它定义了一系列标准化的量化级别（如 Q4_K_M, Q5_K_M 等）。GGUF 的量化通常使用 k-quant 方法，根据权重的分布动态调整量化分组大小。GGUF 最大的优势是支持 CPU 推理（通过 llama.cpp），使得没有高端 GPU 的用户也能运行大模型。</p>
 
-        <pre><code># GGUF 量化级别说明
+        <pre style="overflow-x:auto"><code># GGUF 量化级别说明
 # Q4_0:  4-bit, 对称量化, 32个权重一组     → 最快, 精度最低
 # Q4_K_M: 4-bit, k-quant medium, 性能均衡   → 推荐选择
 # Q5_K_M: 5-bit, k-quant medium             → 精度更好, 体积稍大
@@ -307,13 +361,46 @@
 
         <p>量化压缩让大模型的部署门槛大幅降低——从需要数百张数据中心 GPU，到一张消费级显卡就能运行。但有一个问题浮现了：量化和推理优化虽然让模型"跑得快、跑得轻"，但我们如何知道模型在不同任务上的真实表现呢？下一个话题——<strong>评测体系</strong>——正是为了回答这个问题。让我们进入第 18 章。</p>
 
+        <h2>17.7 参考文献与延伸</h2>
+        <ul>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2412.19437">DeepSeek-V3 Technical Report</a>（arXiv:2412.19437）——原生 FP8 混合精度训练与 FP8 权重导出。</li>
+            <li>Lin et al. <a href="https://arxiv.org/abs/2306.00978">AWQ: Activation-aware Weight Quantization</a>（arXiv:2306.00978）——保留重要通道的激活感知量化。</li>
+            <li>Frantar et al. <a href="https://arxiv.org/abs/2210.17323">GPTQ</a>（arXiv:2210.17323）——基于 Hessian 的逐层量化。</li>
+            <li>llama.cpp / GGUF 格式：<a href="https://github.com/ggerganov/llama.cpp">github.com/ggerganov/llama.cpp</a>——Q4_K_M 等 k-quant 量化级别与 CPU/GPU 混合推理。</li>
+        </ul>
+        <p class="note">本章的 FP8 权重 671GB、671B × 1 byte 等换算引自 DeepSeek-V3 技术报告；FP4 QAT “MMLU 仅降 0.8 个百分点”、社区量化损失对照表（17.5）与 GPU 选型表（17.6）为便于教学的<strong>经验示意</strong>，实际数值随模型、校准集与实现而异，应以各方案官方评测为准；量化沙盘按 671B 参数量线性估算。</p>
+
         <div class="footer-nav">
             <a href="16.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="18.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var total = 671;
+    var bytes = { 'qb-32': 4, 'qb-16': 2, 'qb-8': 1, 'qb-4': 0.5 };
+    var ids = ['qb-32', 'qb-16', 'qb-8', 'qb-4'];
+    var status = document.getElementById('qb-status');
+    if (!status) { return; }
+    function render(key) {
+        for (var i = 0; i < ids.length; i++) {
+            var b = document.getElementById(ids[i]);
+            if (b) { b.setAttribute('aria-pressed', ids[i] === key ? 'true' : 'false'); }
+        }
+        var size = total * bytes[key];
+        status.textContent = total + 'B 参数 × ' + bytes[key] + ' 字节/参数 ≈ ' + size + ' GB（仅权重）。MoE 推理只激活 37B，但全部专家参数都要存储。';
+    }
+    for (var i = 0; i < ids.length; i++) {
+        (function (key) {
+            var b = document.getElementById(key);
+            if (b) { b.addEventListener('click', function () { render(key); }); }
+        })(ids[i]);
+    }
+    render('qb-8');
+})();
+</script>
 </body>
 </html>

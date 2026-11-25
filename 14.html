@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第14章 128K上下文扩展</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第14章 128K上下文扩展</h1>
+            <p class="dek">从 4K 到 128K：先用 YaRN 把位置“压缩”回模型熟悉的范围，再用两阶段渐进训练让它真正适应长序列。</p>
+        </header>
 
         <p>大家好！今天我们来讲一个大模型能力中的重要维度——<strong>长上下文</strong>。</p>
 
@@ -77,7 +80,7 @@
             <li><strong>频率调整</strong>：对 RoPE 的旋转频率做分组处理——高频分量（捕捉局部关系）基本保持原样，低频分量（捕捉长距离关系）做插值。这种"有选择地调整"比其他方法（如 PI、NTK-aware）更精细</li>
         </ul>
 
-        <pre><code># YaRN 位置插值简化理解
+        <pre style="overflow-x:auto"><code># YaRN 位置插值简化理解
 原始 RoPE:
 θ_i = 10000^(-2i/d)              # 第 i 个频率维度
 pos_encoding = [sin(pos * θ_i), cos(pos * θ_i)]
@@ -123,6 +126,34 @@ YaRN 后的 RoPE:
             <strong>直觉理解：</strong>可以把位置编码想象成一个钟表。RoPE 的每个频率维度代表了不同速度的指针。高频是秒针（走很快，表示局部位置），低频是时针（走很慢，表示全局位置）。YaRN 的做法是：让秒针几乎保持原速（高频分量不变），但把时针的速度降低了（低频分量插值）。这样模型既能保持对局部上下文的敏感度，又能理解更长的全局范围。
         </div>
 
+        <div class="math-equation" role="group" aria-label="YaRN 频率缩放与缩放因子定义">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="YaRN 公式，可横向滚动">
+                <math display="block" aria-label="YaRN 缩放后的第 i 个频率 theta_i 等于 10000 的负二 i 比 d 次方 乘以 s 的负二 i 比 d 次方；缩放因子 s 等于目标长度除以训练长度">
+                    <mrow>
+                        <msubsup><mi>θ</mi><mi>i</mi><mo>′</mo></msubsup><mo>=</mo>
+                        <msup><mn>10000</mn><mfrac><mrow><mo>−</mo><mn>2</mn><mi>i</mi></mrow><mi>d</mi></mfrac></msup>
+                        <mo>·</mo>
+                        <msup><mi>s</mi><mfrac><mrow><mo>−</mo><mn>2</mn><mi>i</mi></mrow><mi>d</mi></mfrac></msup>
+                        <mo>,</mo><mo>&#x2003;</mo>
+                        <mi>s</mi><mo>=</mo>
+                        <mfrac><msub><mi>L</mi><mi>target</mi></msub><msub><mi>L</mi><mi>train</mi></msub></mfrac>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
+        <p>公式中 <math class="math-inline" aria-label="i 为频率维度索引"><mi>i</mi></math> 是频率维度索引，<math class="math-inline" aria-label="d 为头维度"><mi>d</mi></math> 是头维度。高频（i 小）时 s 的幂接近 1，几乎不插值；低频（i 大）时缩放明显，主要承担位置压缩。</p>
+
+        <div class="kv-widget">
+            <p><strong>YaRN 缩放因子沙盘：</strong>固定训练长度 <strong>4K</strong>，切换目标长度，观察缩放因子 s = 目标 / 训练 如何变化（<strong>教学示意</strong>）。DeepSeek-V2/V3 实际取 s=40、目标长度 160K，为 128K 留出余量。</p>
+            <div class="kv-controls">
+                <button type="button" id="ya-32" aria-pressed="false">目标 32K</button>
+                <button type="button" id="ya-128" aria-pressed="false">目标 128K</button>
+                <button type="button" id="ya-160" aria-pressed="true">目标 160K</button>
+            </div>
+            <p class="kv-status" id="ya-status" role="status" aria-live="polite"></p>
+        </div>
+
         <h2>14.3 两阶段扩展</h2>
 
         <p>仅仅改变位置编码是不够的——模型还需要在长序列上"适应"新的位置表示。DeepSeek 采用了<strong>两阶段渐进式扩展</strong>策略：</p>
@@ -142,9 +173,36 @@ YaRN 后的 RoPE:
             <li>同样的 batch size 和学习率设置</li>
         </ul>
 
+        <figure>
+            <svg role="img" aria-labelledby="yarn-stage-title yarn-stage-desc" viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg">
+                <title id="yarn-stage-title">YaRN 两阶段渐进式上下文扩展</title>
+                <desc id="yarn-stage-desc">从 4K 预训练基座出发，第一阶段应用 YaRN 并以 32K 序列长度训练 1000 步；第二阶段再次应用 YaRN，以 128K 序列长度再训练 1000 步，最终得到可用的 128K 上下文。</desc>
+                <rect width="760" height="250" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif" text-anchor="middle">
+                    <text x="380" y="32" font-size="14" font-weight="700" fill="#4c1d95">两步走：先适应 32K，再推到 128K，避免一步到位的灾难性遗忘</text>
+                    <rect x="20" y="88" width="152" height="70" rx="12" fill="#ede9fe" stroke="#8b5cf6"/>
+                    <text x="96" y="118" font-size="13" fill="#3b0764">4K</text><text x="96" y="138" font-size="12" fill="#5b21b6">预训练基座</text>
+                    <rect x="212" y="88" width="164" height="70" rx="12" fill="#e0f2fe" stroke="#0ea5e9" stroke-width="2"/>
+                    <text x="294" y="112" font-size="13" fill="#0c4a6e">Stage 1：4K → 32K</text>
+                    <text x="294" y="132" font-size="12" fill="#075985">YaRN + 训 1000 步</text><text x="294" y="149" font-size="12" fill="#075985">seq 32K / batch 576</text>
+                    <rect x="416" y="88" width="164" height="70" rx="12" fill="#e0f2fe" stroke="#0ea5e9" stroke-width="2"/>
+                    <text x="498" y="112" font-size="13" fill="#0c4a6e">Stage 2：32K → 128K</text>
+                    <text x="498" y="132" font-size="12" fill="#075985">再次 YaRN + 1000 步</text><text x="498" y="149" font-size="12" fill="#075985">seq 128K / batch 576</text>
+                    <rect x="620" y="88" width="120" height="70" rx="12" fill="#c4b5fd" stroke="#8b5cf6" stroke-width="2"/>
+                    <text x="680" y="118" font-size="13" fill="#3b0764">128K</text><text x="680" y="138" font-size="12" fill="#4c1d95">可用长上下文</text>
+                    <g stroke="#7c3aed" stroke-width="2.5" fill="none" marker-end="url(#ya-arrow)">
+                        <path d="M172 123 H210"/><path d="M376 123 H414"/><path d="M580 123 H618"/>
+                    </g>
+                    <text x="380" y="205" font-size="12" fill="#64748b">两段训练合计约 119K GPU 小时，不到预训练开销的 5%（引自 DeepSeek-V3 报告）</text>
+                    <defs><marker id="ya-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 z" fill="#7c3aed"/></marker></defs>
+                </g>
+            </svg>
+            <figcaption>上下文扩展不是“一步拉长”，而是分两步走：Stage 1 让模型先在 32K 上适应新的位置表示，Stage 2 再推到 128K。每步的“位压缩”幅度更小，短距离位置感知不易退化。配置与开销见 14.2、14.3 节及 DeepSeek-V2/V3 报告。</figcaption>
+        </figure>
+
         <p>为什么不是一步到位从 4K 直接到 128K？因为<strong>渐进式训练可以避免灾难性遗忘</strong>。如果一步跳到 128K，模型看到的序列中大部分是"填充"内容，位置编码被极端压缩，可能会让模型对短距离的位置感知能力退化。通过先扩展到 32K 再扩展到 128K，每一步的"位压缩"幅度更小，模型更容易适应。</p>
 
-        <pre><code># 两阶段上下文扩展流程
+        <pre style="overflow-x:auto"><code># 两阶段上下文扩展流程
 Stage 1: 4K → 32K
   - 应用 YaRN: scale=40, target=160K（实际只用到 32K 训练）
   - 训练: 1000 steps, seq_len=32K, batch=576
@@ -209,13 +267,46 @@ Stage 2: 32K → 128K
 
         <p>到这里，我们已经学完了 DeepSeek-V3 的所有核心技术：MLA 压缩注意力、DeepSeekMoE 稀疏架构、MTP 多步预测、FP8 混合精度训练、DualPipe 算通重叠、无辅助损失负载均衡、以及今天的长上下文扩展。下一章，我们将把这些技术整合起来，看它们如何协同工作，用 <strong>$5.6M 训练出 671B 的 SOTA 模型</strong>——并揭示这背后更多不为人知的工程细节。</p>
 
+        <h2>14.7 参考文献与延伸</h2>
+        <ul>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2405.04434">DeepSeek-V2</a>（arXiv:2405.04434）——YaRN 配置（s=40、目标长度 160K）与 128K 上下文的两阶段训练细节。</li>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2412.19437">DeepSeek-V3 Technical Report</a>（arXiv:2412.19437）——128K 扩展的额外开销（119K GPU 小时）与“大海捞针”评测结果。</li>
+            <li>Peng et al. <a href="https://arxiv.org/abs/2309.00071">YaRN: Efficient Context Window Extension of Large Language Models</a>（arXiv:2309.00071）——位置插值与频率分组方法。</li>
+            <li>Su et al. <a href="https://arxiv.org/abs/2104.09864">RoFormer / RoPE</a>（arXiv:2104.09864）——旋转位置编码的原始论文。</li>
+        </ul>
+        <p class="note">本章的 s=40、α=1、β=32、目标 160K 等配置引自 DeepSeek-V2 技术报告，两阶段各 1000 步、119K GPU 小时与 NIAH 结论引自 DeepSeek-V3 报告；沙盘中的 s 值由 s = 目标 / 训练 直接算出，仅用于说明插值因子的含义，属于<strong>教学示意</strong>。</p>
+
         <div class="footer-nav">
             <a href="13.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="15.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var train = 4;
+    var targets = { 'ya-32': 32, 'ya-128': 128, 'ya-160': 160 };
+    var ids = ['ya-32', 'ya-128', 'ya-160'];
+    var status = document.getElementById('ya-status');
+    if (!status) { return; }
+    function render(key) {
+        var t = targets[key];
+        for (var i = 0; i < ids.length; i++) {
+            var b = document.getElementById(ids[i]);
+            if (b) { b.setAttribute('aria-pressed', ids[i] === key ? 'true' : 'false'); }
+        }
+        status.textContent = '训练 ' + train + 'K，目标 ' + t + 'K → s = ' + t + ' / ' + train + ' = ' + (t / train) + '。s 越大，低频分量被压得越紧。';
+    }
+    for (var i = 0; i < ids.length; i++) {
+        (function (key) {
+            var b = document.getElementById(key);
+            if (b) { b.addEventListener('click', function () { render(key); }); }
+        })(ids[i]);
+    }
+    render('ya-160');
+})();
+</script>
 </body>
 </html>

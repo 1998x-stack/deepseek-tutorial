@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第21章 DeepSeek-Coder</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第21章 DeepSeek-Coder</h1>
+            <p class="dek">代码不是普通文本：DeepSeek-Coder 用仓库级语料、FIM 填充中间与多语言覆盖，让模型学会跨文件“补全中间那一行”。</p>
+        </header>
 
         <p>在 2023 年底的一个技术分享会上，GitHub Copilot 的团队展示了一个有趣的数据：开发者平均每天写 200 行代码，但其中超过 60% 是"样板代码"——重复的 import、getter/setter、数据格式转换。而 GPT-4 等通用大模型虽然在代码生成上表现不错，但它们对代码的"理解"往往停留在函数级别——挑一个函数出来，它能补全，但放到整个代码库的上下文里，常常出现调用不存在的函数、引用错误的变量名、或者完全不考虑项目结构的问题。</p>
 
@@ -88,7 +91,7 @@
 
         <p>DeepSeek-Coder 引入了 <strong>FIM（Fill-in-the-Middle）</strong> 训练模式。FIM 的核心思想是：将一段代码拆分成前缀（prefix）和后缀（suffix），让模型根据前缀+后缀来生成中间的代码块。</p>
 
-        <pre><code># FIM 训练示例
+        <pre style="overflow-x:auto"><code># FIM 训练示例
 原始代码：
 def calculate_total(items, tax_rate):
     subtotal = sum(items)
@@ -109,10 +112,58 @@ FIM 变换后：
 
         <p>FIM 训练中，大约 50% 的训练数据会被随机选择 FIM 变换。变换方式包括 PSM（前缀-后缀-中间）和 SPM（后缀-前缀-中间）等多种排列，让模型学会在各种上下文中填充代码。</p>
 
+        <div class="math-equation" role="group" aria-label="FIM 训练目标">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="FIM 目标公式，可横向滚动">
+                <math display="block" aria-label="FIM 损失 L 等于负的、在代码样本上求期望：给定前缀和后缀，middle 的对数似然">
+                    <mrow>
+                        <mi>L</mi><mo>=</mo><mo>−</mo><msub><mi>E</mi><mi>code</mi></msub>
+                        <mo>[</mo><mi>log</mi><mi>P</mi><mo>(</mo><mi>middle</mi><mo>|</mo><mi>prefix</mi><mo>,</mo><mi>suffix</mi><mo>)</mo><mo>]</mo>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
+        <figure>
+            <svg role="img" aria-labelledby="fim-title fim-desc" viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+                <title id="fim-title">FIM 把代码拆成前缀/中间/后缀并重排</title>
+                <desc id="fim-desc">上图把一段代码切成前缀、中间、后缀三段，中间段是需要模型预测的目标；下图按 PSM 方式重排为前缀、后缀、中间，中间段移到最后，模型只根据前缀与后缀生成它。</desc>
+                <rect width="760" height="300" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif" text-anchor="middle">
+                    <text x="380" y="32" font-size="14" font-weight="700" fill="#4c1d95">原始代码：按位置切成三段</text>
+                    <rect x="40" y="46" width="280" height="50" rx="9" fill="#ede9fe" stroke="#8b5cf6"/>
+                    <text x="180" y="77" font-size="13" fill="#3b0764">prefix（前缀）</text>
+                    <rect x="322" y="46" width="116" height="50" rx="9" fill="#fef9c3" stroke="#eab308" stroke-width="2"/>
+                    <text x="380" y="77" font-size="13" fill="#854d0e">middle</text>
+                    <rect x="440" y="46" width="280" height="50" rx="9" fill="#ede9fe" stroke="#8b5cf6"/>
+                    <text x="580" y="77" font-size="13" fill="#3b0764">suffix（后缀）</text>
+                    <path d="M380 108 V150" stroke="#7c3aed" stroke-width="2.5" fill="none" marker-end="url(#fim-arrow)"/>
+                    <text x="380" y="136" font-size="12" fill="#7c3aed">按 PSM 重排</text>
+                    <text x="380" y="186" font-size="14" font-weight="700" fill="#4c1d95">模型输入：前缀 + 后缀，目标：中间</text>
+                    <rect x="40" y="206" width="300" height="50" rx="9" fill="#e0f2fe" stroke="#0ea5e9"/>
+                    <text x="190" y="237" font-size="13" fill="#0c4a6e">&lt;fim_prefix&gt; prefix</text>
+                    <rect x="342" y="206" width="300" height="50" rx="9" fill="#e0f2fe" stroke="#0ea5e9"/>
+                    <text x="492" y="237" font-size="13" fill="#0c4a6e">&lt;fim_suffix&gt; suffix</text>
+                    <rect x="654" y="206" width="80" height="50" rx="9" fill="#fef9c3" stroke="#eab308" stroke-width="2"/>
+                    <text x="694" y="237" font-size="12" fill="#854d0e">middle</text>
+                    <defs><marker id="fim-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 z" fill="#7c3aed"/></marker></defs>
+                </g>
+            </svg>
+            <figcaption>FIM 把代码按位置切成前缀/中间/后缀；训练时重排成“前缀 + 后缀 → 生成中间”，让模型学会在中间插入代码（而不仅仅是往后续写）。SPM 则把后缀放到前缀之前，作为另一种排列。图中分段长度与特殊标记为示意。</figcaption>
+        </figure>
+
         <p>这种训练方式的直接效果是：DeepSeek-Coder 在 IDE 插件中的"代码补全"功能表现极佳。当用户在函数体中间加一行代码时，模型能够准确理解"前面写的是什么"和"后面要衔接什么"，然后生成合适的内容。</p>
 
         <div class="tip">
             <strong>FIM 的应用场景：</strong>除了代码补全，FIM 对代码修复也有帮助。如果你把一段包含 bug 的代码作为"中间"部分，把正确的上下文作为前缀和后缀，模型可以学会如何替换有问题的代码段落。DeepSeek 的实验显示，FIM 训练的模型在 bug 定位和修复任务上比纯因果模型好 15-20%。
+        </div>
+
+        <div class="kv-widget">
+            <p><strong>FIM 排列沙盘：</strong>给定一段代码的三个部分（prefix / middle / suffix），切换排列方式，看模型实际看到的序列顺序（<strong>教学示意</strong>）。</p>
+            <div class="kv-controls">
+                <button type="button" id="fim-psm" aria-pressed="true">PSM</button>
+                <button type="button" id="fim-spm" aria-pressed="false">SPM</button>
+            </div>
+            <p class="kv-status" id="fim-status" role="status" aria-live="polite"></p>
         </div>
 
         <h2>21.4 87 种语言覆盖</h2>
@@ -252,13 +303,41 @@ FIM 变换后：
 
         <p>代码生成是 DeepSeek 在垂直领域的一次成功实践。但还有一个数学推理的领域也值得深入探讨。下一章，我们将走进 <strong>DeepSeek-Math</strong>——看看 DeepSeek 是如何通过百万级推理语料和多阶段预训练，在 GSM8K 和 MATH 基准上刷新开源模型的纪录。</p>
 
+        <h2>21.8 参考文献与延伸</h2>
+        <ul>
+            <li>Guo et al. <a href="https://arxiv.org/abs/2401.14196">DeepSeek-Coder</a>（arXiv:2401.14196）——仓库级语料、FIM 训练与 87 种语言的原始报告。</li>
+            <li>Bavarian et al. <a href="https://arxiv.org/abs/2207.14255">Efficient Training of Language Models to Fill in the Middle</a>（arXiv:2207.14255）——FIM 的 PSM/SPM 排列方法。</li>
+            <li>Rozière et al. <a href="https://arxiv.org/abs/2308.12950">Code Llama</a>（arXiv:2308.12950）——作为对照的代码模型。</li>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2406.11931">DeepSeek-Coder-V2</a>（arXiv:2406.11931）——切换到 MoE 架构与 128K 上下文的升级版。</li>
+        </ul>
+        <p class="note">本章的仓库级语料、FIM 与 87 种语言做法引自 DeepSeek-Coder 技术报告；21.6 节的 HumanEval / MBPP 对照表沿用本课程既有整理，具体数值应以 DeepSeek-Coder 技术报告的评测表为准（此处作为<strong>示意对照</strong>）；FIM 沙盘中的示例代码仅为演示。</p>
+
         <div class="footer-nav">
             <a href="20.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="22.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var psm = '<fim_prefix> prefix <fim_suffix> suffix <fim_middle> middle';
+    var spm = '<fim_suffix> suffix <fim_prefix> prefix <fim_middle> middle';
+    var bPsm = document.getElementById('fim-psm');
+    var bSpm = document.getElementById('fim-spm');
+    var status = document.getElementById('fim-status');
+    if (!status || !bPsm || !bSpm) { return; }
+    function render(mode) {
+        bPsm.setAttribute('aria-pressed', mode === 'psm' ? 'true' : 'false');
+        bSpm.setAttribute('aria-pressed', mode === 'spm' ? 'true' : 'false');
+        var seq = mode === 'psm' ? psm : spm;
+        status.textContent = '模型看到的序列：' + seq + ' → 模型只预测末尾的 middle。';
+    }
+    bPsm.addEventListener('click', function () { render('psm'); });
+    bSpm.addEventListener('click', function () { render('spm'); });
+    render('psm');
+})();
+</script>
 </body>
 </html>

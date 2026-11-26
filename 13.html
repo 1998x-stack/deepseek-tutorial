@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第13章 DualPipe与算通重叠</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第13章 DualPipe 与算通重叠</h1>
+            <p class="dek">硬件不变、模型不变，DualPipe 靠双向流水线与计算-通信重叠，把 GPU 的空闲时间挤了出去。</p>
+        </header>
 
         <p>大家好！欢迎进入 DeepSeek 系列教程中"最硬核工程"的一章。今天我们要聊的 <strong>DualPipe</strong> 和 <strong>计算-通信重叠</strong>，是 DeepSeek 能够在 2048 张 H800 上高效训练 671B 模型的核心工程秘密。</p>
 
@@ -56,6 +59,7 @@
 
         <p>在深入 DualPipe 之前，我们需要先理解分布式训练中四种基本并行策略。DeepSeek-V3 把它们都用上了，各司其职：</p>
 
+        <div style="overflow-x:auto">
         <table>
             <tr>
                 <th>并行策略</th>
@@ -83,6 +87,7 @@
                 <td>64 路 EP（跨 8 节点）</td>
             </tr>
         </table>
+        </div>
 
         <p>这里有一个重要的设计选择：<strong>DeepSeek-V3 没有使用 TP</strong>。原因是 TP 要求每个矩阵乘法都在多卡间做切分和同步，通信非常密集。对于 64 路 EP 的 MoE 模型，通信开销已经很大了，再加 TP 会雪上加霜。</p>
 
@@ -100,7 +105,7 @@
 
         <p>DualPipe 的思路完全不同：<strong>同时从两个方向运行流水线</strong>。</p>
 
-        <pre><code>传统 1F1B 流水线:
+        <pre style="overflow-x:auto"><code>传统 1F1B 流水线:
 GPU 0: F0 F1 F2 B2 B1 B0   ← 大量气泡
 GPU 1:   F0 F1 F2 B2 B1 B0
 GPU 2:     F0 F1 F2 B2 B1 B0
@@ -113,7 +118,69 @@ GPU 2: F0→ F1→ B1← B0← F2→ F3→ B3← B2← ...
 → 表示前向，← 表示后向
 箭头方向表示微批次在流水线中的流动方向</code></pre>
 
+        <figure>
+            <svg role="img" aria-labelledby="dp-title dp-desc" viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+                <title id="dp-title">1F1B 与 DualPipe 的流水线气泡对比</title>
+                <desc id="dp-desc">上方 1F1B 时间轴前后各有一段灰色气泡，GPU 在其中空闲；下方 DualPipe 用双向流水线把前向与后向交错填充，气泡范围从 P-1 降到约 P/2-1。示意图仅展示调度形状，不代表真实步数。</desc>
+                <rect width="760" height="260" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif">
+                    <text x="50" y="40" font-size="13" font-weight="600" fill="#4c1d95">1F1B</text>
+                    <text x="430" y="40" font-size="13" font-weight="600" fill="#4c1d95">DualPipe</text>
+                    <g>
+                        <rect x="50" y="56" width="32" height="40" fill="#e5e7eb"/><rect x="82" y="56" width="32" height="40" fill="#e5e7eb"/>
+                        <rect x="114" y="56" width="32" height="40" fill="#c4b5fd"/><rect x="146" y="56" width="32" height="40" fill="#c4b5fd"/><rect x="178" y="56" width="32" height="40" fill="#c4b5fd"/>
+                        <rect x="210" y="56" width="32" height="40" fill="#99f6e4"/><rect x="242" y="56" width="32" height="40" fill="#99f6e4"/><rect x="274" y="56" width="32" height="40" fill="#99f6e4"/>
+                        <rect x="306" y="56" width="32" height="40" fill="#e5e7eb"/><rect x="338" y="56" width="32" height="40" fill="#e5e7eb"/>
+                    </g>
+                    <text x="66" y="112" font-size="10" fill="#6b7280" text-anchor="middle">气泡</text>
+                    <text x="178" y="112" font-size="10" fill="#5b21b6" text-anchor="middle">前向</text>
+                    <text x="274" y="112" font-size="10" fill="#0f766e" text-anchor="middle">后向</text>
+                    <text x="338" y="112" font-size="10" fill="#6b7280" text-anchor="middle">气泡</text>
+                    <g>
+                        <rect x="430" y="56" width="32" height="40" fill="#c4b5fd"/><rect x="462" y="56" width="32" height="40" fill="#99f6e4"/>
+                        <rect x="494" y="56" width="32" height="40" fill="#c4b5fd"/><rect x="526" y="56" width="32" height="40" fill="#99f6e4"/>
+                        <rect x="558" y="56" width="32" height="40" fill="#c4b5fd"/><rect x="590" y="56" width="32" height="40" fill="#99f6e4"/>
+                        <rect x="622" y="56" width="32" height="40" fill="#c4b5fd"/><rect x="654" y="56" width="32" height="40" fill="#99f6e4"/>
+                        <rect x="686" y="56" width="32" height="40" fill="#c4b5fd"/><rect x="718" y="56" width="32" height="40" fill="#99f6e4"/>
+                    </g>
+                    <text x="430" y="150" font-size="11" fill="#5b21b6">前向与后向双向交错，气泡大幅减少</text>
+                    <text x="430" y="180" font-size="11" fill="#64748b">气泡步数：1F1B 为 P−1，DualPipe 约 P/2−1</text>
+                    <text x="50" y="150" font-size="11" fill="#64748b">首尾各一段预热/排空气泡</text>
+                    <text x="50" y="215" font-size="11" fill="#64748b">色块：紫=前向，青=后向，灰=气泡（空闲）</text>
+                </g>
+            </svg>
+            <figcaption>流水线并行的效率瓶颈是两端的气泡：前面的预热和后面的排空期间，大部分阶段无事可做。DualPipe 让前向与后向微批次反向对行，把气泡从约 P−1 个步长压到 P/2−1 个步长——代价是需要同时保留更多的激活值。</figcaption>
+        </figure>
+
         <p>在 DualPipe 中，一半的微批次从前向后流动（前向），另一半从后向前流动（后向），两者在流水线中间交错。这种设计将流水线气泡从 (PP-1) 个步长降低到了 (PP/2 - 1) 个步长，大幅减少了 GPU 空闲时间。</p>
+
+        <div class="math-equation">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="流水线气泡比例公式，可横向滚动">
+                <math display="block" aria-label="流水线气泡占比等于 P 减 1 除以 M 加 P 减 1，其中 P 为流水线阶段数，M 为微批次数">
+                    <mrow>
+                        <mtext>气泡占比</mtext><mo>=</mo>
+                        <mfrac>
+                            <mrow><mi>P</mi><mo>&#x2212;</mo><mn>1</mn></mrow>
+                            <mrow><mi>M</mi><mo>+</mo><mi>P</mi><mo>&#x2212;</mo><mn>1</mn></mrow>
+                        </mfrac>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
+        <div class="kv-widget">
+            <p><strong>流水线气泡沙盘：</strong>给定流水线阶段数 P 与微批次数 M，用上式估算气泡占比。DualPipe 把有效阶段数近似减半（P→P/2）（<strong>教学示意</strong>，未计入激活内存代价）。</p>
+            <div class="kv-controls">
+                <button type="button" data-p="16" data-m="64" aria-pressed="true">P=16, M=64</button>
+                <button type="button" data-p="16" data-m="16">P=16, M=16</button>
+                <button type="button" data-p="8" data-m="64">P=8, M=64</button>
+            </div>
+            <div class="kv-controls">
+                <label>P <input id="pp-p" type="number" min="2" max="64" step="1" value="16"></label>
+                <label>M <input id="pp-m" type="number" min="1" max="512" step="1" value="64"></label>
+            </div>
+            <p class="kv-status" id="pp-status" role="status" aria-live="polite"></p>
+        </div>
 
         <div class="highlight">
             <strong>一个形象的比喻：</strong>传统 1F1B 就像一条单车道隧道——所有车先全部朝一个方向开，再全部反向开回来。隧道里总有一半是空的。DualPipe 就像把隧道改成双车道——两边同时通车，隧道的利用率大幅提升。唯一的代价是需要"更宽"的隧道（更多的激活内存）。
@@ -131,7 +198,7 @@ GPU 2: F0→ F1→ B1← B0← F2→ F3→ B3← B2← ...
             <li><strong>后向重叠</strong>：计算当前微批次的权重梯度时，同时 combine 上一个微批次的 token 梯度</li>
         </ul>
 
-        <pre><code># 计算-通信重叠（简化版）
+        <pre style="overflow-x:auto"><code># 计算-通信重叠（简化版）
 for micro_batch in range(num_micro_batches):
     # Step 1: Dispatch 当前微批次的 token（与上一个微批次的 Attention 重叠）
     dispatch_handle = dispatch_tokens(micro_batch, experts)
@@ -163,6 +230,7 @@ for micro_batch in range(num_micro_batches):
 
         <p>在通信实现上，DeepSeek 使用了 <strong>warp specialization</strong> 技术：将 20 个 SM（Streaming Multiprocessor）划分为 10 个通信通道，分别处理 IB 发送、IB-to-NVLink 转发、NVLink 接收等任务。这些通信 warp 的数量会根据实际工作负载动态调整，确保计算和通信之间的平衡。</p>
 
+        <div style="overflow-x:auto">
         <table>
             <tr>
                 <th>维度</th>
@@ -193,6 +261,7 @@ for micro_batch in range(num_micro_batches):
                 <td>跨节点 IB + 节点内 NVLink 转发</td>
             </tr>
         </table>
+        </div>
 
         <h2>13.5 2048 H800集群57天</h2>
 
@@ -229,13 +298,45 @@ for micro_batch in range(num_micro_batches):
 
         <p>下一章，我们将从训练工程转向推理能力——<strong>128K 上下文扩展</strong>，看 DeepSeek-V3 如何通过 YaRN 和两阶段训练，在位置编码层面支持超长上下文。</p>
 
+        <h2>13.7 参考文献与延伸</h2>
+        <ul>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2412.19437">DeepSeek-V3 Technical Report</a>（arXiv:2412.19437）——DualPipe、算通重叠、Multi-Plane 与 36.7% MFU 的原始描述。</li>
+            <li>Narayanan et al. <a href="https://arxiv.org/abs/2104.04473">Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM</a>（arXiv:2104.04473）——1F1B 调度与流水线气泡分析。</li>
+            <li>Qi et al. <a href="https://arxiv.org/abs/2401.10241">Zero Bubble Pipeline Parallelism</a>（arXiv:2401.10241）——把后向拆成输入/权重梯度以减小气泡的改进。</li>
+        </ul>
+        <p class="note">并行配置表、2048×H800 / 5.7 天级训练数据、MFU 36.7%、成本与 GPU 小时均出自 DeepSeek-V3 技术报告；气泡占比公式为流水线并行的标准公式（已注明 P 与 M 的含义）。图中色块与沙盘中的 P、M 为<strong>教学示意</strong>，仅展示调度形状与量级，不代表真实微批次数。</p>
+
         <div class="footer-nav">
             <a href="12.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="14.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var p = document.getElementById('pp-p'), m = document.getElementById('pp-m'), s = document.getElementById('pp-status');
+    if (!p || !m || !s) { return; }
+    function ratio(P, M) { var d = M + P - 1; return d > 0 ? (P - 1) / d : 0; }
+    function render() {
+        var P = parseFloat(p.value) || 0, M = parseFloat(m.value) || 0;
+        var base = ratio(P, M), dual = ratio(P / 2, M);
+        s.textContent = 'P=' + P + '，M=' + M + '：1F1B 气泡 ≈ ' + (base * 100).toFixed(1) + '%，DualPipe（P/2）≈ ' + (dual * 100).toFixed(1) + '%。';
+    }
+    var btns = document.querySelectorAll('.kv-widget button[data-p]');
+    for (var k = 0; k < btns.length; k++) {
+        (function (btn) {
+            btn.addEventListener('click', function () {
+                p.value = btn.getAttribute('data-p'); m.value = btn.getAttribute('data-m');
+                for (var j = 0; j < btns.length; j++) { btns[j].setAttribute('aria-pressed', btns[j] === btn ? 'true' : 'false'); }
+                render();
+            });
+        })(btns[k]);
+    }
+    p.addEventListener('input', render); m.addEventListener('input', render);
+    render();
+})();
+</script>
 </body>
 </html>

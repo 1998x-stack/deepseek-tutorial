@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第5章 SFT + DPO 对齐</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第5章 SFT + DPO 对齐</h1>
+            <p class="dek">基座模型知道很多，却未必听你的。SFT 教会它“照做”，DPO 教会它在两个回答之间选更好的那个。</p>
+        </header>
 
         <p>大家好，欢迎回到 DeepSeek 系列教程。前几章我们聊了模型架构、词表设计和数据管线——这些都是构建一个强大基座模型的关键组件。但有一个关键问题：预训练模型不等于好用的聊天助手。</p>
 
@@ -87,7 +90,7 @@
 
         <p>让我们用一个具体的对比来说明两阶段 vs 单阶段的效果差异：</p>
 
-        <pre><code>用户输入: "写一首关于秋天的短诗"
+        <pre style="overflow-x:auto"><code>用户输入: "写一首关于秋天的短诗"
 
 单阶段微调（数学+对话混合）:
 "让我们从诗歌理论开始分析。秋天作为古典诗歌的重要意象，
@@ -137,7 +140,7 @@
 
         <p>让我们一步步拆解 DPO 的数学原理：</p>
 
-        <pre><code>Step 1: 准备偏好数据
+        <pre style="overflow-x:auto"><code>Step 1: 准备偏好数据
 对每个 prompt x，收集两个回答 y_w (偏好) 和 y_l (不偏好)
 数据集 D = {(x_i, y_w_i, y_l_i)}
 
@@ -157,9 +160,49 @@ r_θ(x,y) = β * log(π_θ(y|x) / π_ref(y|x))
 - 也就是: 偏好回答的概率相对上升，不偏好回答的相对下降
 - β 控制"能偏离基座模型多远"</code></pre>
 
+        <figure>
+            <svg role="img" aria-labelledby="dpo-title dpo-desc" viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+                <title id="dpo-title">DPO 用偏好对直接优化策略</title>
+                <desc id="dpo-desc">同一个 prompt x 产生两个回答：人类偏好的 y_w 与不偏好的 y_l。DPO 损失会提高 y_w 相对参考模型的概率比、降低 y_l 的概率比，从而在不训练显式奖励模型的情况下完成对齐。</desc>
+                <rect width="760" height="260" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif" text-anchor="middle">
+                    <rect x="320" y="20" width="120" height="42" rx="10" fill="#ede9fe" stroke="#8b5cf6"/>
+                    <text x="380" y="47" font-size="13" fill="#3b0764">prompt x</text>
+                    <path d="M360 62 L230 105" stroke="#7c3aed" stroke-width="2" marker-end="url(#dpo-arrow)"/>
+                    <path d="M400 62 L530 105" stroke="#7c3aed" stroke-width="2" marker-end="url(#dpo-arrow)"/>
+                    <rect x="130" y="108" width="200" height="44" rx="10" fill="#dcfce7" stroke="#16a34a"/>
+                    <text x="230" y="136" font-size="13" fill="#14532d">y_w（人类偏好）</text>
+                    <rect x="430" y="108" width="200" height="44" rx="10" fill="#fee2e2" stroke="#ef4444"/>
+                    <text x="530" y="136" font-size="13" fill="#7f1d1d">y_l（不偏好）</text>
+                    <path d="M230 152 L330 192" stroke="#16a34a" stroke-width="2" marker-end="url(#dpo-arrow)"/>
+                    <path d="M530 152 L430 192" stroke="#ef4444" stroke-width="2" marker-end="url(#dpo-arrow)"/>
+                    <text x="245" y="178" font-size="11" fill="#15803d">提高 r_w</text>
+                    <text x="515" y="178" font-size="11" fill="#b91c1c">降低 r_l</text>
+                    <rect x="195" y="196" width="370" height="44" rx="10" fill="#ccfbf1" stroke="#0d9488"/>
+                    <text x="380" y="224" font-size="13" fill="#115e59">L = −log σ( β (r_w − r_l) )</text>
+                    <defs><marker id="dpo-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 z" fill="#7c3aed"/></marker></defs>
+                </g>
+            </svg>
+            <figcaption>DPO 把对齐变成一次“比较学习”：对同一个 prompt，惩罚模型相对参考模型更偏爱 y_l、更不偏爱 y_w。参考模型 π_ref 保持冻结，用来拉住策略不要偏离 SFT 基座太远。</figcaption>
+        </figure>
+
+        <div class="math-equation">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="DPO 隐式奖励函数，可横向滚动">
+                <math display="block" aria-label="隐式奖励 r 等于 beta 乘以当前策略在 y 上的概率与参考模型概率之比的对数">
+                    <mrow>
+                        <msub><mi>r</mi><mi>θ</mi></msub><mo>(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>)</mo><mo>=</mo><mi>β</mi><mi>log</mi>
+                        <mfrac>
+                            <mrow><msub><mi>π</mi><mi>θ</mi></msub><mo>(</mo><mi>y</mi><mo>|</mo><mi>x</mi><mo>)</mo></mrow>
+                            <mrow><msub><mi>π</mi><mtext>ref</mtext></msub><mo>(</mo><mi>y</mi><mo>|</mo><mi>x</mi><mo>)</mo></mrow>
+                        </mfrac>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
         <p>DPO 的训练流程也非常直接——它几乎就是标准的语言模型微调，只是损失函数变成了上面的形式：</p>
 
-        <pre><code>DPO 训练伪代码:
+        <pre style="overflow-x:auto"><code>DPO 训练伪代码:
 
 for each batch {(x, y_w, y_l)} in D:
     # 当前模型的 log-probability
@@ -181,6 +224,20 @@ for each batch {(x, y_w, y_l)} in D:
     loss.backward()
     optimizer.step()</code></pre>
 
+        <div class="kv-widget">
+            <p><strong>DPO 损失沙盘：</strong>给定 β 与对数概率差 Δ（= [logπ_θ(y_w)−logπ_ref(y_w)] − [logπ_θ(y_l)−logπ_ref(y_l)]），计算间隔 m = β·Δ、损失 L = −log σ(m)，以及“偏好 y_w”的概率 σ(m)（<strong>教学示意</strong>）。Δ 越大，模型越能分清好坏，损失越小。</p>
+            <div class="kv-controls">
+                <button type="button" data-b="0.1" data-d="0" aria-pressed="true">Δ=0（无区分）</button>
+                <button type="button" data-b="0.1" data-d="2">Δ=2</button>
+                <button type="button" data-b="0.5" data-d="2">β=0.5，Δ=2</button>
+            </div>
+            <div class="kv-controls">
+                <label>β <input id="dpo-b" type="number" min="0.01" max="5" step="0.05" value="0.1"></label>
+                <label>Δ <input id="dpo-d" type="number" min="-10" max="10" step="0.5" value="0"></label>
+            </div>
+            <p class="kv-status" id="dpo-status" role="status" aria-live="polite"></p>
+        </div>
+
         <p>对比一下 RLHF 的流程：训练奖励模型（需要额外的标注数据）→ 用 PPO 优化策略（需要 4 个模型共同训练）→ 复杂的 KL 散度约束和 reward scaling。DPO 的优雅之处在于，它将 RLHF 中的"先拟合奖励、再优化策略"的两步过程，简化成了"直接优化策略"的一步过程。</p>
 
         <div class="warning">
@@ -191,6 +248,7 @@ for each batch {(x, y_w, y_l)} in D:
 
         <p>DPO 和 RLHF 是两种不同的对齐方法论，各有优劣。下面是 DeepSeek 在实践中总结的对比：</p>
 
+        <div style="overflow-x:auto">
         <table>
             <tr>
                 <th>维度</th>
@@ -233,6 +291,7 @@ for each batch {(x, y_w, y_l)} in D:
                 <td>无：只在固定偏好数据上优化</td>
             </tr>
         </table>
+        </div>
 
         <p>可以看到，DPO 在训练简洁性和稳定性上有明显优势，但并非完全优于 RLHF。RLHF 的奖励模型可以在训练过程中持续提供反馈信号，而 DPO 只能在静态数据集上优化，缺乏"探索"能力。</p>
 
@@ -252,6 +311,7 @@ for each batch {(x, y_w, y_l)} in D:
 
         <p><strong>人工评测：</strong>这是对齐评估的"金标准"。DeepSeek 团队会定期组织内部的盲测（A/B test），让标注员对比不同版本模型的输出质量。评估维度包括：</p>
 
+        <div style="overflow-x:auto">
         <table>
             <tr>
                 <th>维度</th>
@@ -284,6 +344,7 @@ for each batch {(x, y_w, y_l)} in D:
                 <td>同一主题前后回答不矛盾</td>
             </tr>
         </table>
+        </div>
 
         <p><strong>红队测试（Red Teaming）：</strong>这是安全对齐最重要的环节。专门的安全研究团队会尝试用各种攻击手段诱导模型生成有害内容——包括越狱（jailbreak）、角色扮演诱导、多轮渐进式诱导等。红队测试的结果直接反馈到对齐数据的优化中，形成"攻击→防御→更强攻击→更强防御"的迭代循环。</p>
 
@@ -297,13 +358,47 @@ for each batch {(x, y_w, y_l)} in D:
 
         <p>但 DeepSeek LLM 67B 仍然是一个稠密模型——所有参数在每次推理时都被激活。想要用更少的计算量获得更大的模型容量，我们需要换一条技术路线。下一章，我们将进入 <strong>MoE（Mixture of Experts）架构</strong> 的世界，这是 DeepSeek 后续所有突破性工作的基础。敬请期待。</p>
 
+        <h2>5.7 参考文献与延伸</h2>
+        <ul>
+            <li>Rafailov et al. <a href="https://arxiv.org/abs/2305.18290">Direct Preference Optimization</a>（arXiv:2305.18290）——DPO 的原始论文与隐式奖励函数推导。</li>
+            <li>Ouyang et al. <a href="https://arxiv.org/abs/2203.02155">Training language models to follow instructions with human feedback</a>（arXiv:2203.02155）——RLHF / PPO 对齐的代表工作。</li>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2401.02954">DeepSeek LLM</a>（arXiv:2401.02954）——两阶段 SFT 与 DPO 策略的描述。</li>
+            <li>Zheng et al. <a href="https://arxiv.org/abs/2306.05685">Judging LLM-as-a-Judge with MT-Bench</a>（arXiv:2306.05685）——MT-Bench 评测方法。</li>
+        </ul>
+        <p class="note">DPO 隐式奖励推导与训练伪代码取自 DPO 原论文；两阶段微调、β 取值区间（0.1–0.5）出自 DeepSeek LLM 论文的工程描述。本章“MT-Bench 4.5→7.2”与“有害回复率 12%→2%”为原章节给出的量级，未在本次核对中溯源到具体表格，读作大致规模；沙盘中的 β、Δ 为<strong>教学示意</strong>，用的是标准 sigmoid 损失，不代表真实训练数值。</p>
+
         <div class="footer-nav">
             <a href="04.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="06.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var b = document.getElementById('dpo-b'), d = document.getElementById('dpo-d'), s = document.getElementById('dpo-status');
+    if (!b || !d || !s) { return; }
+    function render() {
+        var B = parseFloat(b.value) || 0, D = parseFloat(d.value) || 0;
+        var m = B * D;
+        var p = 1 / (1 + Math.exp(-m));
+        var loss = -Math.log(p);
+        s.textContent = 'm = β·Δ = ' + m.toFixed(3) + '；L = −log σ(m) = ' + loss.toFixed(3) + '；σ(m) = ' + p.toFixed(3) + '。';
+    }
+    var btns = document.querySelectorAll('.kv-widget button[data-b]');
+    for (var k = 0; k < btns.length; k++) {
+        (function (btn) {
+            btn.addEventListener('click', function () {
+                b.value = btn.getAttribute('data-b'); d.value = btn.getAttribute('data-d');
+                for (var m2 = 0; m2 < btns.length; m2++) { btns[m2].setAttribute('aria-pressed', btns[m2] === btn ? 'true' : 'false'); }
+                render();
+            });
+        })(btns[k]);
+    }
+    b.addEventListener('input', render); d.addEventListener('input', render);
+    render();
+})();
+</script>
 </body>
 </html>

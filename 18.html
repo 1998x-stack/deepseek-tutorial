@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第18章 评测体系</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第18章 评测体系</h1>
+            <p class="dek">从 MMLU 到 GPQA，基准分数把“模型行不行”变成了可比较的数字——但它衡量的，终究只是能力的一个切面。</p>
+        </header>
 
         <p>2024 年底，DeepSeek-V3 的技术报告发布后，AI 社区出现了两种截然不同的声音。一边惊叹于它 $5.6M 的训练成本，另一边则紧盯着那张评测对比表，寻找它不如 GPT-4o 的地方。"在 GPQA 上还差 GPT-4o 两个点"、"在 LiveCodeBench 上只领先 0.3%"——人们以显微镜般的精度审视着每一行数字。</p>
 
@@ -56,6 +59,7 @@
 
         <p>大模型评测通常分为四大类，每一类评测模型的不同维度：</p>
 
+        <div style="overflow-x:auto">
         <table>
             <tr>
                 <th>评测类别</th>
@@ -83,6 +87,7 @@
                 <td>数学计算、问题求解、定理证明</td>
             </tr>
         </table>
+        </div>
 
         <p>此外还有对齐评测（如 MT-Bench, AlpacaEval 评估模型的对话质量）、安全评测（评估模型的安全性和偏见）、长文本评测（如 RULER, Needle-in-a-Haystack）等等。一个完整的大模型评测体系需要覆盖所有这些维度。</p>
 
@@ -121,6 +126,37 @@
         <h3>HumanEval</h3>
         <p><strong>HumanEval</strong> 是 OpenAI 在 2021 年提出的代码生成基准，包含 164 道手写的 Python 编程问题。每道题包含函数签名、文档字符串和多个测试用例，模型需要生成完整的函数实现。评测指标是 <strong>pass@k</strong>——在 k 次采样中，至少有一次通过所有测试用例的比例。</p>
 
+        <div class="math-equation">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="pass@k 无偏估计公式，可横向滚动">
+                <math display="block" aria-label="pass@k 对每道题取 1 减去从 n 个样本中取 k 个全部失败的组合比例，再对题目求期望">
+                    <mrow>
+                        <mtext>pass@k</mtext><mo>=</mo><msub><mi>E</mi><mtext>problems</mtext></msub>
+                        <mo>[</mo><mn>1</mn><mo>&#x2212;</mo>
+                        <mfrac>
+                            <mrow><mi>C</mi><mo>(</mo><mi>n</mi><mo>&#x2212;</mo><mi>c</mi><mo>,</mo><mi>k</mi><mo>)</mo></mrow>
+                            <mrow><mi>C</mi><mo>(</mo><mi>n</mi><mo>,</mo><mi>k</mi><mo>)</mo></mrow>
+                        </mfrac>
+                        <mo>]</mo>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
+        <div class="kv-widget">
+            <p><strong>pass@k 沙盘：</strong>给定每道题的采样数 n、其中通过数 c、以及 k，用上式估算该题的 pass@k（<strong>教学示意</strong>）。k=1 时即为单次通过率；k 变大时“至少一次通过”的概率上升。</p>
+            <div class="kv-controls">
+                <button type="button" data-n="10" data-c="3" data-k="1" aria-pressed="true">n=10, c=3, k=1</button>
+                <button type="button" data-n="10" data-c="3" data-k="5">n=10, c=3, k=5</button>
+                <button type="button" data-n="20" data-c="1" data-k="10">n=20, c=1, k=10</button>
+            </div>
+            <div class="kv-controls">
+                <label>n <input id="pk-n" type="number" min="1" value="10"></label>
+                <label>c <input id="pk-c" type="number" min="0" value="3"></label>
+                <label>k <input id="pk-k" type="number" min="1" value="1"></label>
+            </div>
+            <p class="kv-status" id="pk-status" role="status" aria-live="polite"></p>
+        </div>
+
         <p>DeepSeek-V3 在 HumanEval 上的 pass@1 得分为 <strong>82.6</strong>，接近 GPT-4o 的 86.2。但代码类评测的一个重要特点是：模型的分数高度依赖于正确的 <strong>few-shot prompting 和 post-processing</strong>。DeepSeek 团队发现，通过优化 prompt 中的代码风格示例和输出格式约束，V3 的 HumanEval 分数可以进一步提升到 90+ 的水平。</p>
 
         <h3>LiveCodeBench</h3>
@@ -144,7 +180,7 @@
 
         <p>DeepSeek-V3 在 MATH-500 上的得分为 <strong>90.2</strong>，而 GPT-4o 为 88.9。这个成绩说明 V3 不仅会算小学算术，还能处理一定复杂度的数学竞赛题。</p>
 
-        <pre><code># 数学评测的典型 prompt
+        <pre style="overflow-x:auto"><code># 数学评测的典型 prompt
 # (GSM8K 示例)
 #
 # 问题: 小明有 12 个苹果，他给了小红三分之一的苹果，
@@ -166,6 +202,36 @@
 
         <p>最后，我们来看一张 DeepSeek 全系列模型在主要基准上的综合对比表。这张表可以清晰地展示 DeepSeek 从 V2 到 V3 再到 R1 的能力演进。</p>
 
+        <figure>
+            <svg role="img" aria-labelledby="bench-title bench-desc" viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+                <title id="bench-title">三个基准上 V3、R1、GPT-4o 的得分对比</title>
+                <desc id="bench-desc">分组柱状图：在 MMLU、GPQA Diamond、MATH-500 三个基准上，DeepSeek-V3 分别为 88.5、59.1、90.2，DeepSeek-R1 为 90.8、71.5、95.9，GPT-4o 为 87.2、62.4、88.9。R1 在推理密集型基准上的提升最大。</desc>
+                <rect width="760" height="300" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif">
+                    <line x1="70" y1="250" x2="740" y2="250" stroke="#c4b5fd"/>
+                    <text x="70" y="20" font-size="12" fill="#4c1d95">得分（0–100）</text>
+                    <g font-size="11">
+                        <rect x="450" y="10" width="14" height="14" fill="#8b5cf6"/><text x="470" y="21" fill="#3b0764">V3</text>
+                        <rect x="510" y="10" width="14" height="14" fill="#0d9488"/><text x="530" y="21" fill="#115e59">R1</text>
+                        <rect x="575" y="10" width="14" height="14" fill="#cbd5e1"/><text x="595" y="21" fill="#475569">GPT-4o</text>
+                    </g>
+                    <g>
+                        <rect x="120" y="73" width="34" height="177" fill="#8b5cf6"/><rect x="158" y="68" width="34" height="182" fill="#0d9488"/><rect x="196" y="76" width="34" height="174" fill="#cbd5e1"/>
+                        <rect x="320" y="132" width="34" height="118" fill="#8b5cf6"/><rect x="358" y="107" width="34" height="143" fill="#0d9488"/><rect x="396" y="125" width="34" height="125" fill="#cbd5e1"/>
+                        <rect x="520" y="70" width="34" height="180" fill="#8b5cf6"/><rect x="558" y="58" width="34" height="192" fill="#0d9488"/><rect x="596" y="72" width="34" height="178" fill="#cbd5e1"/>
+                    </g>
+                    <g font-size="11" text-anchor="middle" fill="#334155">
+                        <text x="175" y="65">88.5</text><text x="175" y="262" fill="#1e293b" font-size="12">MMLU</text>
+                        <text x="375" y="99">59.1</text><text x="375" y="262" fill="#1e293b" font-size="12">GPQA</text>
+                        <text x="575" y="50">90.2</text><text x="575" y="262" fill="#1e293b" font-size="12">MATH-500</text>
+                    </g>
+                    <text x="70" y="285" font-size="11" fill="#64748b">柱高按得分线性绘制；得分数值取自本章综合对比表。</text>
+                </g>
+            </svg>
+            <figcaption>同样的基准、同样的纵轴：V3 已在 MMLU 上小幅领先 GPT-4o，而在需要深度推理的 GPQA 与 MATH-500 上，R1 借助强化学习把差距进一步拉开。这提示“知识广度”与“推理深度”是两条不同的曲线。</figcaption>
+        </figure>
+
+        <div style="overflow-x:auto">
         <table>
             <tr>
                 <th>基准</th>
@@ -232,6 +298,7 @@
                 <td>89.7</td>
             </tr>
         </table>
+        </div>
 
         <div class="highlight">
             <strong>从中可以得出的几条重要结论：</strong><br>
@@ -246,13 +313,55 @@
 
         <p>到这里为止，我们已经覆盖了 DeepSeek-V3 从训练、推理、量化到评测的全链路技术体系。从第 19 章开始，我们将进入一个全新的方向——<strong>推理增强</strong>。DeepSeek-R1 是如何通过纯强化学习让大模型学会"深度思考"的？GRPO 算法又是如何在没有标注数据的情况下训练出推理能力的？下一章，我们来揭开 <strong>GRPO 强化推理</strong> 的神秘面纱。</p>
 
+        <h2>18.7 参考文献与延伸</h2>
+        <ul>
+            <li>Hendrycks et al. <a href="https://arxiv.org/abs/2009.03300">Measuring Massive Multitask Language Understanding</a>（arXiv:2009.03300）——MMLU 基准原文。</li>
+            <li>Rein et al. <a href="https://arxiv.org/abs/2311.12022">GPQA: A Graduate-Level Google-Proof Q&A Benchmark</a>（arXiv:2311.12022）——GPQA 的题目构建与人类对照。</li>
+            <li>Chen et al. <a href="https://arxiv.org/abs/2107.03374">Evaluating Large Language Models Trained on Code</a>（arXiv:2107.03374）——HumanEval 与 pass@k 无偏估计的出处。</li>
+            <li>Cobbe et al. <a href="https://arxiv.org/abs/2110.14168">Training Verifiers to Solve Math Word Problems</a>（arXiv:2110.14168）——GSM8K 基准。</li>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2412.19437">DeepSeek-V3 Technical Report</a>（arXiv:2412.19437）——本章各基准得分的来源。</li>
+        </ul>
+        <p class="note">表中各模型得分引自 DeepSeek-V3 技术报告及其附录；“柱状图按得分线性绘制”，仅用于直观对比；pass@k 公式为 HumanEval 论文中的无偏估计式，沙盘中的 n、c、k 为<strong>教学示意</strong>，不代表真实评测配置。需注意：不同论文、不同 time-limit 与 prompt 设置下同一基准的分数并不严格可比。</p>
+
         <div class="footer-nav">
             <a href="17.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="19.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var n = document.getElementById('pk-n'), c = document.getElementById('pk-c'), k = document.getElementById('pk-k'), s = document.getElementById('pk-status');
+    if (!n || !c || !k || !s) { return; }
+    function comb(N, K) {
+        if (K < 0 || K > N) { return 0; }
+        K = Math.min(K, N - K);
+        var r = 1;
+        for (var i = 0; i < K; i++) { r = r * (N - i) / (i + 1); }
+        return r;
+    }
+    function render() {
+        var N = parseFloat(n.value) || 0, C = parseFloat(c.value) || 0, K = parseFloat(k.value) || 0;
+        var denom = comb(N, K);
+        if (denom === 0 || K > N || C > N) { s.textContent = '需要 n 且 k≤n 且 c≤n，请检查输入。'; return; }
+        var p = 1 - comb(N - C, K) / denom;
+        s.textContent = 'pass@' + K + ' = 1 − C(' + (N - C) + ',' + K + ')/C(' + N + ',' + K + ') = ' + p.toFixed(3) + '。';
+    }
+    var btns = document.querySelectorAll('.kv-widget button[data-n]');
+    for (var j = 0; j < btns.length; j++) {
+        (function (btn) {
+            btn.addEventListener('click', function () {
+                n.value = btn.getAttribute('data-n'); c.value = btn.getAttribute('data-c'); k.value = btn.getAttribute('data-k');
+                for (var m = 0; m < btns.length; m++) { btns[m].setAttribute('aria-pressed', btns[m] === btn ? 'true' : 'false'); }
+                render();
+            });
+        })(btns[j]);
+    }
+    n.addEventListener('input', render); c.addEventListener('input', render); k.addEventListener('input', render);
+    render();
+})();
+</script>
 </body>
 </html>

@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html" class="active">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第27章 DeepSeek-V4</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第27章 DeepSeek-V4</h1>
+            <p class="dek">1.6T 参数、CSA+HCA 混合注意力、Muon 优化器、FP4 QAT 与百万上下文：V4 几乎推倒重来，却在效率与规模上同时下注成功。</p>
+        </header>
 
         <p>2026 年 4 月 24 日，DeepSeek 发布了 V4 预览版。消息一出，中文互联网上立刻炸开了锅——不仅仅是因为它 1.6 万亿参数的规模，更因为它的技术路线上写满了"叛逆"：放弃了已经极其成熟的 MLA 注意力机制，换上了全新的 CSA+HCA 混合注意力；放弃了业界标配的 AdamW 优化器，改用了尚在探索期的 Muon；放弃了传统的 FP8 推理，直接压到 FP4。每一项决策单独拿出来都像是在"赌"，但 V4 把它们全部赌赢了。</p>
 
@@ -136,7 +139,39 @@
 
         <p>HCA 则是一种更加激进的全局压缩通道：它把每 128 个 token 压缩成一个条目，不做稀疏选择，而是对所有压缩条目执行密集注意力。在 100 万 token 上下文中，HCA 只需处理大约 8,000 个压缩条目——计算量可以忽略不计，但提供了一条全局信息通路。</p>
 
-        <pre><code>CSA 计算流程示意:
+        <figure>
+            <svg role="img" aria-labelledby="csa-title csa-desc" viewBox="0 0 760 340" xmlns="http://www.w3.org/2000/svg">
+                <title id="csa-title">V4 的 CSA+HCA 双路混合注意力</title>
+                <desc id="csa-desc">输入序列分两路：CSA 先按每 4 个 token 重叠压缩成块，再用闪电索引器选 Top-1024 加 128 个滑动窗口做局部精确注意力；HCA 把每 128 个 token 压成一条、对全部压缩条目做密集注意力，提供全局信号。两路输出拼接后得到最终注意力。</desc>
+                <rect width="760" height="340" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif">
+                    <text x="24" y="26" font-size="13" fill="#4c1d95">V4 混合注意力：CSA 局部精读 + HCA 全局速览</text>
+                    <rect x="24" y="150" width="104" height="56" rx="8" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+                    <text x="76" y="174" font-size="12" fill="#334155" text-anchor="middle">输入序列</text>
+                    <text x="76" y="192" font-size="11" fill="#475569" text-anchor="middle">L = 1M token</text>
+                    <line x1="128" y1="178" x2="196" y2="100" stroke="#a855f7" stroke-width="2"/>
+                    <line x1="128" y1="178" x2="196" y2="246" stroke="#0d9488" stroke-width="2"/>
+                    <rect x="196" y="40" width="360" height="120" rx="10" fill="#faf5ff" stroke="#a855f7" stroke-width="2"/>
+                    <text x="376" y="64" font-size="12" fill="#6b21a8" text-anchor="middle">CSA 压缩稀疏（每 m=4 压缩、重叠 50%）</text>
+                    <text x="376" y="92" font-size="11" fill="#7c3aed" text-anchor="middle">块级注意力 → Lightning Indexer 打分 → Top-1024</text>
+                    <text x="376" y="114" font-size="11" fill="#7c3aed" text-anchor="middle">＋ 128 个滑动窗口 token（保住局部细节）</text>
+                    <text x="376" y="138" font-size="11" fill="#9d174d" text-anchor="middle">每 query 实际参与约 k + w = 1152 个位置</text>
+                    <rect x="196" y="196" width="360" height="100" rx="10" fill="#f0fdfa" stroke="#0d9488" stroke-width="2"/>
+                    <text x="376" y="220" font-size="12" fill="#0f766e" text-anchor="middle">HCA 重度压缩（每 m'=128 压成 1 条）</text>
+                    <text x="376" y="246" font-size="11" fill="#0f766e" text-anchor="middle">约 8K 压缩条目 → 密集注意力（全局信号通道）</text>
+                    <text x="376" y="270" font-size="11" fill="#0f766e" text-anchor="middle">不做稀疏选择，成本极低但提供全局视野</text>
+                    <line x1="556" y1="100" x2="632" y2="178" stroke="#a855f7" stroke-width="2"/>
+                    <line x1="556" y1="246" x2="632" y2="178" stroke="#0d9488" stroke-width="2"/>
+                    <rect x="632" y="150" width="104" height="56" rx="8" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+                    <text x="684" y="174" font-size="12" fill="#5b21b6" text-anchor="middle">拼接</text>
+                    <text x="684" y="192" font-size="11" fill="#6d28d9" text-anchor="middle">注意力输出</text>
+                    <text x="24" y="322" font-size="11" fill="#64748b">示意：m、m'、k、w 的取值见本节正文与代码块；两路并行计算后再融合。</text>
+                </g>
+            </svg>
+            <figcaption>V4 放弃 MLA 的核心原因：百万 token 下 O(L²) 依然太重。CSA 用“压缩 + 稀疏 + 局部窗口”把每 query 的关注面收敛到约 k+w 个位置，HCA 再用极低成本的全量压缩条目保留全局信息——两者拼接，兼顾精度与效率。</figcaption>
+        </figure>
+
+        <pre style="overflow-x:auto"><code>CSA 计算流程示意:
 
 输入序列 (L=1M tokens)
     │
@@ -153,6 +188,33 @@
     └── 拼接 → 最终注意力输出</code></pre>
 
         <p>效果是惊人的。在 100 万 token 上下文中，V4-Pro 的推理 FLOPs 只有 V3.2 的 <strong>27%</strong>，KV Cache 用量只有 V3.2 的 <strong>10%</strong>。V4-Flash 更是将这两个数字压到了 10% 和 7%。换句话说，如果你在 V3.2 上跑一个 100 万 token 的推理请求需要 100 块钱的电费，V4-Flash 只需要 10 块钱。</p>
+
+        <div class="math-equation">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="CSA 每个查询实际参与注意力的位置比例公式，可横向滚动">
+                <math display="block" aria-label="CSA 每个查询实际参与注意力的位置比例等于 k 加 w 除以 L">
+                    <mrow>
+                        <msub><mi>r</mi><mtext>attn</mtext></msub><mo>=</mo>
+                        <mfrac><mrow><mi>k</mi><mo>+</mo><mi>w</mi></mrow><mi>L</mi></mfrac>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
+        <div class="kv-widget">
+            <p><strong>CSA 压缩沙盘：</strong>给定序列长度 L、压缩比 m、邻块重叠比例 overlap、Top-K 数 k 与滑动窗口 w，估算压缩块数 <code>L/(m×(1−overlap))</code> 与每 query 实际参与注意力的位置比例 <code>(k+w)/L</code>。<strong>教学示意</strong>，未计入索引器开销。</p>
+            <div class="kv-controls">
+                <label>L <input id="csa-l" type="number" min="1" step="1024" value="1048576"></label>
+                <label>m <input id="csa-m" type="number" min="1" step="1" value="4"></label>
+                <label>overlap <input id="csa-ov" type="number" min="0" max="0.9" step="0.1" value="0.5"></label>
+                <label>k <input id="csa-k" type="number" min="1" step="128" value="1024"></label>
+                <label>w <input id="csa-w" type="number" min="0" step="64" value="128"></label>
+            </div>
+            <div class="kv-controls">
+                <button type="button" data-l="1048576" data-m="4" aria-pressed="true">1M / m=4</button>
+                <button type="button" data-l="131072" data-m="4" aria-pressed="false">128K / m=4</button>
+            </div>
+            <p class="kv-status" id="csa-status" role="status" aria-live="polite"></p>
+        </div>
 
         <div class="tip">
             <strong>技术细节：</strong>V4 还引入了 Partial RoPE（仅对最后 64 维施加位置编码）、Attention Sink（每个注意力头设置一个专门的"注意力汇聚"token）、以及混合精度 KV Cache（BF16 用于 RoPE 维度，FP8 用于其余维度）等辅助技术，共同构成了百万 token 上下文的全栈优化方案。
@@ -218,7 +280,7 @@
 
         <p>但工程上的挑战比算法本身更大。Muon 需要完整的梯度矩阵才能做正交化，这与 ZeRO 优化器将参数分片到不同设备的策略直接冲突。DeepSeek 的工程师用了一种巧妙的方法解决：基于背包问题的桶分配算法 + MoE 参数展平，将额外开销控制在 10% 以下。跨数据并行 ranks 的梯度通信使用 BF16 随机舍入 + all-to-all + 本地 FP32 累加。</p>
 
-        <pre><code>Muon vs AdamW 对比:
+        <pre style="overflow-x:auto"><code>Muon vs AdamW 对比:
 
 AdamW 参数更新:
   m_t = β₁·m_{t-1} + (1-β₁)·g_t
@@ -315,7 +377,7 @@ Muon 参数更新:
 
         <div class="tip">
             <strong>快速上手 V4-Flash：</strong>
-<pre><code>pip install transformers
+<pre style="overflow-x:auto"><code>pip install transformers
 from transformers import AutoModelForCausalLM, AutoTokenizer
 model = AutoModelForCausalLM.from_pretrained(
     "deepseek-ai/DeepSeek-V4-Flash",
@@ -339,8 +401,33 @@ print(tokenizer.decode(outputs[0]))
             <a href="index.html">📖 返回目录</a>
             <a href="28.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var l = document.getElementById('csa-l'), m = document.getElementById('csa-m'), ov = document.getElementById('csa-ov'), k = document.getElementById('csa-k'), w = document.getElementById('csa-w'), s = document.getElementById('csa-status');
+    if (!l || !m || !ov || !k || !w || !s) { return; }
+    function fmt(n) { return Math.round(n).toLocaleString('en-US'); }
+    function render() {
+        var L = Math.max(1, parseFloat(l.value) || 0), M = Math.max(1, parseFloat(m.value) || 0), O = Math.min(0.9, Math.max(0, parseFloat(ov.value) || 0)), K = Math.max(1, parseFloat(k.value) || 0), W = Math.max(0, parseFloat(w.value) || 0);
+        var blocks = L / (M * (1 - O)), ratio = (K + W) / L;
+        s.textContent = '压缩块数 ≈ ' + fmt(blocks) + '；每 query 关注约 ' + fmt(K + W) + ' 个位置，占 L 的 ' + (ratio * 100).toFixed(3) + '%。';
+    }
+    var fields = [l, m, ov, k, w];
+    for (var i = 0; i < fields.length; i++) { fields[i].addEventListener('input', render); }
+    var btns = document.querySelectorAll('.kv-widget button[data-l]');
+    for (var j = 0; j < btns.length; j++) {
+        (function (b) {
+            b.addEventListener('click', function () {
+                l.value = b.getAttribute('data-l'); m.value = b.getAttribute('data-m');
+                for (var q = 0; q < btns.length; q++) { btns[q].setAttribute('aria-pressed', btns[q] === b ? 'true' : 'false'); }
+                render();
+            });
+        })(btns[j]);
+    }
+    render();
+})();
+</script>
 </body>
 </html>

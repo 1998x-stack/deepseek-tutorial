@@ -110,7 +110,7 @@
 
         <p>数学上，LoRA 将权重更新量 ΔW 分解为两个低秩矩阵的乘积：</p>
 
-        <pre><code>ΔW = A × B
+        <pre style="overflow-x:auto"><code>ΔW = A × B
 
 其中:
 - A ∈ ℝ^(d×r) ，从高斯分布初始化
@@ -120,7 +120,7 @@
 
         <p>训练时的前向传播就变成：</p>
 
-        <pre><code>h = Wx + ΔWx = Wx + (A × B)x</code></pre>
+        <pre style="overflow-x:auto"><code>h = Wx + ΔWx = Wx + (A × B)x</code></pre>
 
         <figure>
             <svg role="img" aria-labelledby="lora-title lora-desc" viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
@@ -151,7 +151,34 @@
             <figcaption>LoRA 的核心：冻结原权重 W，只学习低秩增量 ΔW = A·B。可训练参数从 d×k 降到 d×r + r×k；当 r 远小于 d、k 时，训练参数量只有总量的千分之一量级，而推理延迟不变。</figcaption>
         </figure>
 
+        <div class="math-equation">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="LoRA 可训练参数量公式，可横向滚动">
+                <math display="block" aria-label="LoRA 单个权重矩阵的可训练参数量等于秩 r 乘以输入维度与输出维度之和">
+                    <mrow>
+                        <msub><mi>N</mi><mtext>LoRA</mtext></msub><mo>=</mo><mi>r</mi><mo>&#x00D7;</mo><mo>(</mo><msub><mi>d</mi><mtext>in</mtext></msub><mo>+</mo><msub><mi>d</mi><mtext>out</mtext></msub><mo>)</mo>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
+        <div class="kv-widget">
+            <p><strong>可训练参数量沙盘：</strong>对单个 <code>d_out×d_in</code> 的权重矩阵，全量微调更新 <code>d_out×d_in</code> 个参数；LoRA（秩 r）只训练 <code>r×(d_in+d_out)</code> 个。<strong>教学示意</strong>，未计入 bias 与被适配的层数。</p>
+            <div class="kv-controls">
+                <label>d_in <input id="lora-din" type="number" min="1" step="1" value="4096"></label>
+                <label>d_out <input id="lora-dout" type="number" min="1" step="1" value="4096"></label>
+                <label>r <input id="lora-r" type="number" min="1" step="1" value="16"></label>
+            </div>
+            <div class="kv-controls">
+                <button type="button" data-r="8" aria-pressed="false">r = 8</button>
+                <button type="button" data-r="16" aria-pressed="true">r = 16</button>
+                <button type="button" data-r="32" aria-pressed="false">r = 32</button>
+            </div>
+            <p class="kv-status" id="lora-status" role="status" aria-live="polite"></p>
+        </div>
+
         <p>训练时只更新 A 和 B，W 保持冻结。推理时可以把 A×B 合并回 W 中，<strong>不会增加任何推理延迟</strong>——这是 LoRA 的杀手锏优势。</p>
+
+        <p>LoRA 由 Hu 等人于 2021 年提出（<a href="https://arxiv.org/abs/2106.09685">arXiv:2106.09685</a>），QLoRA 由 Dettmers 等人于 2023 年提出（<a href="https://arxiv.org/abs/2305.14314">arXiv:2305.14314</a>），两者现已成为开源社区微调的默认起点。</p>
 
         <div class="highlight">
             <strong>直观理解：</strong>想象你要微调一个 1000 页的百科全书（原始权重）。全量微调是重新编写全书。LoRA 是在每页贴一个"修正贴纸"，贴纸上只写需要修改的内容。推理时，读者看到的是修正贴纸覆盖后的最终结果，就像原始内容本来就是这样写的。显存的节省来自于——你只需要存储"贴纸"的参数，而不是整本书的副本。
@@ -159,7 +186,7 @@
 
         <p>使用 Hugging Face PEFT 库来实现 DeepSeek 的 LoRA 微调非常直接：</p>
 
-        <pre><code>from transformers import AutoModelForCausalLM, AutoTokenizer
+        <pre style="overflow-x:auto"><code>from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import LoraConfig, get_peft_model
 import torch
 
@@ -196,7 +223,7 @@ print(f"总参数量: {model.num_parameters():,}")
 
         <p>这三招合在一起，让 QLoRA 能在<strong>单张 RTX 4090 上微调 32B 模型</strong>，这在一年前几乎是不可想象的。下面是完整的实操代码：</p>
 
-        <pre><code>from transformers import (
+        <pre style="overflow-x:auto"><code>from transformers import (
     AutoModelForCausalLM, AutoTokenizer,
     BitsAndBytesConfig, TrainingArguments
 )
@@ -283,7 +310,7 @@ model.save_pretrained("./deepseek-law-lora")</code></pre>
 
         <p>DeepSeek 使用 ChatML 格式的对话模板。每条数据是一个 messages 数组：</p>
 
-        <pre><code>[
+        <pre style="overflow-x:auto"><code>[
   {
     "messages": [
       {"role": "system", "content": "你是一位专业的法律合同审查助手。请仔细分析合同条款，指出潜在风险并提供修改建议。"},
@@ -367,7 +394,7 @@ model.save_pretrained("./deepseek-law-lora")</code></pre>
 
         <p>用留出的测试集（训练数据中没见过的样本）做评测。但更重要的是——<strong>让领域专家做盲测</strong>。把模型的输出和人工标注的标准答案混在一起，让专家打分。一个常见的陷阱是：loss 降得很漂亮，但专家打出来的分反而低了，这往往是因为模型学会的只是"看起来像"的套话，而不是真正的理解。</p>
 
-        <pre><code># 简单自动化评估脚本
+        <pre style="overflow-x:auto"><code># 简单自动化评估脚本
 from rouge_score import rouge_scorer
 from bert_score import score as bert_score
 
@@ -445,5 +472,29 @@ print(f"平均 BERTScore F1: {F1.mean():.3f}")</code></pre>
     </main>
 </div>
 </div>
+<script>
+(function () {
+    var din = document.getElementById('lora-din'), dout = document.getElementById('lora-dout'), r = document.getElementById('lora-r'), s = document.getElementById('lora-status');
+    if (!din || !dout || !r || !s) { return; }
+    function fmt(n) { return n.toLocaleString('en-US'); }
+    function render() {
+        var a = Math.max(1, parseInt(din.value, 10) || 0), b = Math.max(1, parseInt(dout.value, 10) || 0), k = Math.max(1, parseInt(r.value, 10) || 0);
+        var full = a * b, lora = k * (a + b), pct = full ? (lora / full * 100) : 0;
+        s.textContent = '全量 ' + fmt(full) + ' 个参数 → LoRA(r=' + k + ') ' + fmt(lora) + ' 个，约占 ' + pct.toFixed(2) + '%。';
+    }
+    din.addEventListener('input', render); dout.addEventListener('input', render); r.addEventListener('input', render);
+    var btns = document.querySelectorAll('.kv-widget button[data-r]');
+    for (var i = 0; i < btns.length; i++) {
+        (function (btn) {
+            btn.addEventListener('click', function () {
+                r.value = btn.getAttribute('data-r');
+                for (var m = 0; m < btns.length; m++) { btns[m].setAttribute('aria-pressed', btns[m] === btn ? 'true' : 'false'); }
+                render();
+            });
+        })(btns[i]);
+    }
+    render();
+})();
+</script>
 </body>
 </html>

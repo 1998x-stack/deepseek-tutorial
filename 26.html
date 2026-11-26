@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第26章 V3.1/V3.2演进</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第26章 V3.1/V3.2演进</h1>
+            <p class="dek">从知识蒸馏到混合推理，再到 DSA 动态稀疏注意力：V3.1/V3.2 用架构融合与两阶段稀疏化，重画了长上下文推理的效率边界。</p>
+        </header>
 
         <p>想象一下：你手里有两位顶级专家。一位是推理大师，解数学题、写代码样样精通，但每次回答问题都要先花几分钟"思考人生"——即使只是问现在几点。另一位是快枪手，日常对话对答如流，但遇到复杂的逻辑推理问题就容易"翻车"。在过去，你得分别请这两位专家，按需切换。</p>
 
@@ -118,7 +121,7 @@
 
         <p>在 Web 端和 App 端，DeepSeek 提供了一个"深度思考"（DeepThink）开关。用户关闭它时，模型以非推理模式快速响应；打开它时，模型切换到推理模式。这种设计比 GPT-5 的自动路由策略更加透明——用户拥有控制权，而不是让模型自行判断是否需要思考。</p>
 
-        <pre><code>// 非推理模式 API 调用 (Non-Think)
+        <pre style="overflow-x:auto"><code>// 非推理模式 API 调用 (Non-Think)
 curl https://api.deepseek.com/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
@@ -159,6 +162,29 @@ curl https://api.deepseek.com/chat/completions \
 
         <p>这个设计将复杂度从 O(L²) 降到了 O(L·k)，其中 k=2,048 是一个恒定值。当上下文长度为 128K 时，DSA 的计算量只有标准注意力的 <strong>1.6%</strong>。</p>
 
+        <figure>
+            <svg role="img" aria-labelledby="dsa-title dsa-desc" viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+                <title id="dsa-title">DSA 两阶段稀疏注意力</title>
+                <desc id="dsa-desc">查询 token 先经轻量级闪电索引器为全部历史 token 打分，再选出分数最高的 Top-K（k=2048）token（图中用深色标出），完整注意力只在被选中的 token 上计算，复杂度从 O(L²) 降到 O(L·k)。</desc>
+                <rect width="760" height="300" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif">
+                    <text x="40" y="28" font-size="13" fill="#4c1d95">DSA：先打分，再只对 Top-K 做完整注意力</text>
+                    <rect x="36" y="120" width="96" height="62" rx="8" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+                    <text x="84" y="150" font-size="12" fill="#5b21b6" text-anchor="middle">Query</text>
+                    <text x="84" y="168" font-size="11" fill="#7c3aed" text-anchor="middle">当前 token</text>
+                    <line x1="140" y1="151" x2="196" y2="151" stroke="#7c3aed" stroke-width="2" marker-end="url(#dsa-arrow)"/>
+                    <defs><marker id="dsa-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7c3aed"/></marker></defs>
+                    <text x="440" y="86" font-size="12" fill="#6d28d9" text-anchor="middle">① 闪电索引器打分（64 head, FP8）</text>
+                    <g stroke="#94a3b8"><rect x="210" y="135" width="24" height="24" rx="4" fill="#e2e8f0"/><rect x="238" y="135" width="24" height="24" rx="4" fill="#e2e8f0"/><rect x="266" y="135" width="24" height="24" rx="4" fill="#0d9488"/><rect x="294" y="135" width="24" height="24" rx="4" fill="#e2e8f0"/><rect x="322" y="135" width="24" height="24" rx="4" fill="#e2e8f0"/><rect x="350" y="135" width="24" height="24" rx="4" fill="#0d9488"/><rect x="378" y="135" width="24" height="24" rx="4" fill="#e2e8f0"/><rect x="406" y="135" width="24" height="24" rx="4" fill="#e2e8f0"/><rect x="434" y="135" width="24" height="24" rx="4" fill="#e2e8f0"/><rect x="462" y="135" width="24" height="24" rx="4" fill="#0d9488"/><rect x="490" y="135" width="24" height="24" rx="4" fill="#e2e8f0"/><rect x="518" y="135" width="24" height="24" rx="4" fill="#e2e8f0"/><rect x="546" y="135" width="24" height="24" rx="4" fill="#0d9488"/><rect x="574" y="135" width="24" height="24" rx="4" fill="#e2e8f0"/><rect x="602" y="135" width="24" height="24" rx="4" fill="#0d9488"/><rect x="630" y="135" width="24" height="24" rx="4" fill="#e2e8f0"/></g>
+                    <text x="432" y="180" font-size="11" fill="#64748b" text-anchor="middle">全部历史 token（共 L 个）；深色 = 分数最高的 Top-K（k=2048）</text>
+                    <text x="40" y="222" font-size="12" fill="#0f766e">② Top-K 选择：无论上下文多长，每个 query 只保留 k=2048 个</text>
+                    <text x="40" y="248" font-size="12" fill="#0f766e">③ 完整注意力只在选中的 token 上计算 → 复杂度 O(L·k)，而非 O(L²)</text>
+                    <text x="40" y="278" font-size="11" fill="#64748b">图中方块为示意；实际 k 与 head 数、精度见本节正文。</text>
+                </g>
+            </svg>
+            <figcaption>DSA 的两阶段稀疏化：先用轻量索引器给全部历史 token 打分，再只保留 Top-K（k=2048）做完整注意力。序列越长，被跳过的低分 token 就越多——这就是相对于标准注意力的节省来源。</figcaption>
+        </figure>
+
         <table>
             <tr>
                 <th>上下文长度</th>
@@ -185,6 +211,30 @@ curl https://api.deepseek.com/chat/completions \
                 <td>98.4%</td>
             </tr>
         </table>
+
+        <div class="math-equation">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="DSA 计算量节省公式，可横向滚动">
+                <math display="block" aria-label="计算量节省比例等于 1 减去 k 与 L 的比值">
+                    <mrow>
+                        <mi>&#x03B7;</mi><mo>=</mo><mn>1</mn><mo>&#x2212;</mo><mfrac><mi>k</mi><mi>L</mi></mfrac>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
+        <div class="kv-widget">
+            <p><strong>DSA 计算量沙盘：</strong>以标准注意力 O(L²) 与 DSA O(L·k) 为模型估算计算量比例与节省。<strong>教学示意</strong>，未计入索引器自身开销与实现细节。</p>
+            <div class="kv-controls">
+                <label>L（上下文 token） <input id="dsa-l" type="number" min="1" step="1024" value="131072"></label>
+                <label>k（Top-K） <input id="dsa-k" type="number" min="1" step="256" value="2048"></label>
+            </div>
+            <div class="kv-controls">
+                <button type="button" data-l="131072" data-k="2048" aria-pressed="true">128K</button>
+                <button type="button" data-l="32768" data-k="2048" aria-pressed="false">32K</button>
+                <button type="button" data-l="8192" data-k="2048" aria-pressed="false">8K</button>
+            </div>
+            <p class="kv-status" id="dsa-status" role="status" aria-live="polite"></p>
+        </div>
 
         <p>但稀疏化必然带来信息损失。为了将损失降到最低，DeepSeek 采用了两阶段训练策略：第一阶段冻结主模型，只训练索引器（1,000 步，21 亿 token）；第二阶段解冻所有参数联合训练（15,000 步，9,437 亿 token），且索引器和主模型的梯度互不干扰。</p>
 
@@ -215,7 +265,7 @@ curl https://api.deepseek.com/chat/completions \
 
         <p>一个典型的 Code Agent 工作流程长这样：</p>
 
-        <pre><code>用户: "写一个 Python 脚本，从某个 API 获取股票数据并绘制 K 线图"
+        <pre style="overflow-x:auto"><code>用户: "写一个 Python 脚本，从某个 API 获取股票数据并绘制 K 线图"
 
 Agent 思考:
 &lt;think&gt;
@@ -308,8 +358,33 @@ Agent 回答:
             <a href="index.html">📖 返回目录</a>
             <a href="27.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var l = document.getElementById('dsa-l'), k = document.getElementById('dsa-k'), s = document.getElementById('dsa-status');
+    if (!l || !k || !s) { return; }
+    function fmt(n) { return n.toLocaleString('en-US'); }
+    function render() {
+        var L = Math.max(1, parseFloat(l.value) || 0), K = Math.max(1, parseFloat(k.value) || 0);
+        var std = L * L, dsa = L * K, saving = 1 - K / L;
+        s.textContent = '标准 L²=' + fmt(std) + '，DSA L·k=' + fmt(dsa) + '，约为 ' + (dsa / std * 100).toFixed(2) + '%（节省 ' + (saving * 100).toFixed(2) + '%）。';
+    }
+    var fields = [l, k];
+    for (var i = 0; i < fields.length; i++) { fields[i].addEventListener('input', render); }
+    var btns = document.querySelectorAll('.kv-widget button[data-l]');
+    for (var j = 0; j < btns.length; j++) {
+        (function (b) {
+            b.addEventListener('click', function () {
+                l.value = b.getAttribute('data-l'); k.value = b.getAttribute('data-k');
+                for (var m = 0; m < btns.length; m++) { btns[m].setAttribute('aria-pressed', btns[m] === b ? 'true' : 'false'); }
+                render();
+            });
+        })(btns[j]);
+    }
+    render();
+})();
+</script>
 </body>
 </html>

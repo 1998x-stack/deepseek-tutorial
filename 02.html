@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第2章 DeepSeek LLM (V1)</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第2章 DeepSeek LLM (V1)</h1>
+            <p class="dek">首个正式版本用 GQA、多步学习率与两阶段对齐打下了地基：先把“效率优先”写进架构，再谈规模。</p>
+        </header>
 
         <p>大家好，欢迎回到 DeepSeek 系列教程。上一章我们聊了大模型效率困境的全局图景——Scaling Law 的局限性、成本鸿沟的严峻性，以及 DeepSeek 选择的三条技术路径。现在，让我们把时钟拨回到 2024 年初，看看 DeepSeek 的第一篇正式论文 <em>"DeepSeek LLM: Scaling Open-Source Language Models with Longtermism"</em>。</p>
 
@@ -64,6 +67,7 @@
 
         <p>DeepSeek LLM 7B 和 67B 的核心配置对比如下：</p>
 
+        <div style="overflow-x:auto">
         <table>
             <tr>
                 <th>配置项</th>
@@ -122,6 +126,7 @@
                 <td>2T</td>
             </tr>
         </table>
+        </div>
 
         <div class="tip">
             <strong>设计哲学：</strong>DeepSeek 选择 7B 和 67B 两个版本而非 LLaMA 的 7B/13B/33B/65B 四档，体现了一种"务实主义"——7B 用小成本验证想法，67B 直冲 SOTA 基线。中间尺寸的实验结果可以通过 Scaling Law 插值推断，不需要每个尺寸都训练一个完整模型。
@@ -135,7 +140,7 @@
 
         <p>GQA 的解决方案很巧妙：<strong>让多个 Query 头共享同一组 Key 和 Value 头。</strong>具体来说，DeepSeek 的 7B 模型有 32 个 Query 头，但 K/V 头只有 4 个——每 8 个 Query 头共享 1 组 K/V。</p>
 
-        <pre><code>标准 MHA（以 32 头为例）:
+        <pre style="overflow-x:auto"><code>标准 MHA（以 32 头为例）:
 Query: [H1, H2, H3, ..., H32]   → 每个头独立 K/V
 Key:   [H1, H2, H3, ..., H32]
 Value: [H1, H2, H3, ..., H32]
@@ -147,12 +152,62 @@ Key:   [G1, G2, G3, G4]
 Value: [G1, G2, G3, G4]
 KV Cache 组数 = 4  → 减少 87.5%</code></pre>
 
+        <figure>
+            <svg role="img" aria-labelledby="gqa-title gqa-desc" viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+                <title id="gqa-title">MHA、GQA、MQA 三种 K/V 共享方式</title>
+                <desc id="gqa-desc">三个面板对比：MHA 每个 Query 头都有独立的一组 K/V；GQA 将多个 Query 头分成若干组，每组共享一组 K/V；MQA 所有 Query 头共享唯一一组 K/V。共享越彻底，KV Cache 越小。</desc>
+                <rect width="760" height="300" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif" text-anchor="middle">
+                    <text x="145" y="34" font-size="14" font-weight="700" fill="#4c1d95">MHA</text>
+                    <text x="380" y="34" font-size="14" font-weight="700" fill="#4c1d95">GQA</text>
+                    <text x="615" y="34" font-size="14" font-weight="700" fill="#4c1d95">MQA</text>
+                    <text x="145" y="54" font-size="11" fill="#64748b">每头独立</text>
+                    <text x="380" y="54" font-size="11" fill="#64748b">分组共享</text>
+                    <text x="615" y="54" font-size="11" fill="#64748b">全共享</text>
+                    <g fill="#ede9fe" stroke="#8b5cf6">
+                        <circle cx="70" cy="95" r="11"/><circle cx="100" cy="95" r="11"/><circle cx="130" cy="95" r="11"/><circle cx="160" cy="95" r="11"/><circle cx="190" cy="95" r="11"/><circle cx="220" cy="95" r="11"/>
+                        <circle cx="305" cy="95" r="11"/><circle cx="335" cy="95" r="11"/><circle cx="365" cy="95" r="11"/><circle cx="395" cy="95" r="11"/><circle cx="425" cy="95" r="11"/><circle cx="455" cy="95" r="11"/>
+                        <circle cx="540" cy="95" r="11"/><circle cx="570" cy="95" r="11"/><circle cx="600" cy="95" r="11"/><circle cx="630" cy="95" r="11"/><circle cx="660" cy="95" r="11"/><circle cx="690" cy="95" r="11"/>
+                    </g>
+                    <text x="145" y="80" font-size="10" fill="#6d28d9">Q 头</text>
+                    <text x="380" y="80" font-size="10" fill="#6d28d9">Q 头</text>
+                    <text x="615" y="80" font-size="10" fill="#6d28d9">Q 头</text>
+                    <g stroke="#a78bfa" stroke-width="1.4">
+                        <line x1="70" y1="106" x2="70" y2="194"/><line x1="100" y1="106" x2="100" y2="194"/><line x1="130" y1="106" x2="130" y2="194"/><line x1="160" y1="106" x2="160" y2="194"/><line x1="190" y1="106" x2="190" y2="194"/><line x1="220" y1="106" x2="220" y2="194"/>
+                        <line x1="305" y1="106" x2="320" y2="194"/><line x1="335" y1="106" x2="320" y2="194"/><line x1="365" y1="106" x2="380" y2="194"/><line x1="395" y1="106" x2="380" y2="194"/><line x1="425" y1="106" x2="440" y2="194"/><line x1="455" y1="106" x2="440" y2="194"/>
+                        <line x1="540" y1="106" x2="615" y2="194"/><line x1="570" y1="106" x2="615" y2="194"/><line x1="600" y1="106" x2="615" y2="194"/><line x1="630" y1="106" x2="615" y2="194"/><line x1="660" y1="106" x2="615" y2="194"/><line x1="690" y1="106" x2="615" y2="194"/>
+                    </g>
+                    <g fill="#ccfbf1" stroke="#0d9488">
+                        <circle cx="70" cy="205" r="11"/><circle cx="100" cy="205" r="11"/><circle cx="130" cy="205" r="11"/><circle cx="160" cy="205" r="11"/><circle cx="190" cy="205" r="11"/><circle cx="220" cy="205" r="11"/>
+                        <circle cx="320" cy="205" r="11"/><circle cx="380" cy="205" r="11"/><circle cx="440" cy="205" r="11"/>
+                        <circle cx="615" cy="205" r="11"/>
+                    </g>
+                    <text x="145" y="245" font-size="11" fill="#0f766e">KV Cache 1×</text>
+                    <text x="380" y="245" font-size="11" fill="#0f766e">KV Cache ≈ 1/g</text>
+                    <text x="615" y="245" font-size="11" fill="#0f766e">KV Cache ≈ 1/H</text>
+                    <text x="380" y="278" font-size="11" fill="#64748b">示意图仅画出每个分组内部分共享关系；DeepSeek 7B 为 32 个 Q 头 / 4 组 K/V，即 g=8。</text>
+                </g>
+            </svg>
+            <figcaption>从 MHA 到 GQA 再到 MQA，本质是 K/V 头的共享程度逐渐提高。共享越多，KV Cache 越小、推理越省显存，但注意力表达力也随之下降。GQA 是两者之间的折中：用远小于 MHA 的缓存代价，换回接近其表达力的效果。</figcaption>
+        </figure>
+
         <p>这带来的收益是巨大的：</p>
         <ul>
             <li><strong>KV Cache 减少 8 倍</strong>——同样显存可以支持更长的上下文或更大的 batch size</li>
             <li><strong>推理吞吐量提升</strong>——更少的内存带宽压力意味着更高的 token 生成速度</li>
             <li><strong>性能损失极小</strong>——DeepSeek 的实验表明，GQA 在多数评测任务上的性能退化不足 1%</li>
         </ul>
+
+        <div class="kv-widget">
+            <p><strong>GQA 缓存沙盘：</strong>固定 32 个 Query 头（H=32，<strong>教学示意</strong>），切换 K/V 组数 g，观察 KV Cache 相对标准 MHA 的比例 g/H。g=1 即 MQA，g=H 则退化为 MHA。</p>
+            <div class="kv-controls">
+                <button type="button" data-g="1">g=1 (MQA)</button>
+                <button type="button" data-g="4" aria-pressed="true">g=4</button>
+                <button type="button" data-g="8">g=8</button>
+                <button type="button" data-g="32">g=32 (MHA)</button>
+            </div>
+            <p class="kv-status" id="gqa-status" role="status" aria-live="polite"></p>
+        </div>
 
         <div class="highlight">
             <strong>一个有趣的背景：</strong>GQA 最早由 Google 在 2023 年的论文 <em>"GQA: Training Generalized Multi-Query Transformer"</em> 中提出，但真正将其大规模工程化落地的，DeepSeek 是先行者之一。Meta 后来在 LLaMA 2 70B 上仍然使用 MHA，直到 LLaMA 3 才引入 GQA。DeepSeek 在 V1 阶段就果断采用 GQA，说明团队对推理效率的重视从一开始就刻在了基因里。
@@ -164,7 +219,7 @@ KV Cache 组数 = 4  → 减少 87.5%</code></pre>
 
         <p>DeepSeek 提出了一个实用的解法：<strong>多步学习率调度器（Multi-step LR Scheduler）。</strong>核心思想是：将整个训练过程分成多个 step，每个 step 采用独立的学习率衰减计划。前 80% 的训练权重可以被复用为后续实验的起点。</p>
 
-        <pre><code>Multi-step LR Scheduler 示意图:
+        <pre style="overflow-x:auto"><code>Multi-step LR Scheduler 示意图:
 
 Step 1 (0% - 20%): 预热 + 余弦衰减到初始 LR 的 30%
 Step 2 (20% - 40%): 从 30% LR 重新预热 + 继续衰减
@@ -191,7 +246,7 @@ Step 5 (80% - 100%): 最后微调阶段
 
         <p>DeepSeek 团队训练了从 100M 到 1B 参数的 50 多个小模型，覆盖不同的数据量和架构配置，然后统计了实际测量到的 FLOPs。结果如下：</p>
 
-        <pre><code>经典公式: C = 6 × N × D
+        <pre style="overflow-x:auto"><code>经典公式: C = 6 × N × D
 
 实测偏差（以 100M 参数模型为例）:
 - 公式预测 C_pred = 6 × 100M × D
@@ -232,6 +287,7 @@ Step 5 (80% - 100%): 最后微调阶段
 
         <p>SFT（Supervised Fine-Tuning）阶段的数据规模和构成如下：</p>
 
+        <div style="overflow-x:auto">
         <table>
             <tr>
                 <th>数据类别</th>
@@ -276,6 +332,7 @@ Step 5 (80% - 100%): 最后微调阶段
                 <td>故事、文案、诗歌</td>
             </tr>
         </table>
+        </div>
 
         <h2>2.6 DPO 对齐</h2>
 
@@ -283,7 +340,7 @@ Step 5 (80% - 100%): 最后微调阶段
 
         <p>DeepSeek 选择了更新、更简洁的方案：<strong>DPO（Direct Preference Optimization）</strong>。DPO 的核心洞察是：奖励函数可以隐式地表达为策略模型和参考模型的比值，不需要显式地训练一个奖励模型。</p>
 
-        <pre><code>DPO 损失函数的核心形式:
+        <pre style="overflow-x:auto"><code>DPO 损失函数的核心形式:
 
 L = -E[ log σ(β * (log(π_θ(y_w|x) / π_ref(y_w|x)) - log(π_θ(y_l|x) / π_ref(y_l|x)))) ]
 
@@ -295,10 +352,34 @@ L = -E[ log σ(β * (log(π_θ(y_w|x) / π_ref(y_w|x)) - log(π_θ(y_l|x) / π_r
 - β: 控制偏离参考模型程度的超参数
 - σ: sigmoid 函数</code></pre>
 
+        <div class="math-equation">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="DPO 损失公式，可横向滚动">
+                <math display="block" aria-label="DPO 损失等于负的期望 log sigmoid，括号内是 beta 乘以偏好回答与不偏好回答的对数比值之差">
+                    <mrow>
+                        <msub><mi>L</mi><mtext>DPO</mtext></msub><mo>=</mo><mo>&#x2212;</mo>
+                        <msub><mi>E</mi><mi>D</mi></msub><mo>[</mo><mi>log</mi><mo>&#x2009;</mo><mi>σ</mi><mo>(</mo><mi>β</mi><mo>(</mo>
+                        <mi>log</mi>
+                        <mfrac>
+                            <mrow><msub><mi>π</mi><mi>θ</mi></msub><mo>(</mo><msub><mi>y</mi><mi>w</mi></msub><mo>|</mo><mi>x</mi><mo>)</mo></mrow>
+                            <mrow><msub><mi>π</mi><mtext>ref</mtext></msub><mo>(</mo><msub><mi>y</mi><mi>w</mi></msub><mo>|</mo><mi>x</mi><mo>)</mo></mrow>
+                        </mfrac>
+                        <mo>&#x2212;</mo>
+                        <mi>log</mi>
+                        <mfrac>
+                            <mrow><msub><mi>π</mi><mi>θ</mi></msub><mo>(</mo><msub><mi>y</mi><mi>l</mi></msub><mo>|</mo><mi>x</mi><mo>)</mo></mrow>
+                            <mrow><msub><mi>π</mi><mtext>ref</mtext></msub><mo>(</mo><msub><mi>y</mi><mi>l</mi></msub><mo>|</mo><mi>x</mi><mo>)</mo></mrow>
+                        </mfrac>
+                        <mo>)</mo><mo>)</mo><mo>]</mo>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
         <p>这个公式的直觉是：<strong>让模型更倾向于生成人类偏好的回复（y_w），同时远离人类不偏好的回复（y_l）。</strong>约束条件是模型不能偏离 SFT 基座太远——β 参数就是控制这个"安全距离"的。</p>
 
         <p>DPO 相比 RLHF 的优势非常明显：</p>
 
+        <div style="overflow-x:auto">
         <table>
             <tr>
                 <th>维度</th>
@@ -331,6 +412,7 @@ L = -E[ log σ(β * (log(π_θ(y_w|x) / π_ref(y_w|x)) - log(π_θ(y_l|x) / π_r
                 <td>直接（偏好对直接优化）</td>
             </tr>
         </table>
+        </div>
 
         <div class="tip">
             <strong>需要注意：</strong>DPO 虽然简洁，但它对偏好数据的质量要求比 RLHF 更高。在 RLHF 中，奖励模型可以泛化到未标注的样本；而 DPO 直接优化每个偏好对，如果数据集里有噪声（标注错误的偏好），DPO 更容易学到错误的方向。DeepSeek 团队花了大量精力做偏好数据的质量清洗和一致性校验。
@@ -342,6 +424,7 @@ L = -E[ log σ(β * (log(π_θ(y_w|x) / π_ref(y_w|x)) - log(π_θ(y_l|x) / π_r
 
         <p>在标准评测集上，DeepSeek 67B 的成绩令人印象深刻：</p>
 
+        <div style="overflow-x:auto">
         <table>
             <tr>
                 <th>评测集</th>
@@ -379,6 +462,7 @@ L = -E[ log σ(β * (log(π_θ(y_w|x) / π_ref(y_w|x)) - log(π_θ(y_l|x) / π_r
                 <td>55.6</td>
             </tr>
         </table>
+        </div>
 
         <p>特别值得关注的是中文评测——DeepSeek 作为中国团队训练的模型，在中文任务上的优势非常显著。这得益于大词表策略和双语数据的精心配比，我们会在后续章节详细展开。</p>
 
@@ -394,13 +478,41 @@ L = -E[ log σ(β * (log(π_θ(y_w|x) / π_ref(y_w|x)) - log(π_θ(y_l|x) / π_r
 
         <p>下一章，我们要聊一个看似细微但影响深远的设计决策——<strong>10 万 BPE 词表</strong>。为什么 DeepSeek 选择了一个远超同行的词表大小？超大词表如何降低推理成本？中文 tokenization 有哪些特殊的挑战？我们下章见。</p>
 
+        <h2>2.8 参考文献与延伸</h2>
+        <ul>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2401.02954">DeepSeek LLM: Scaling Open-Source Language Models with Longtermism</a>（arXiv:2401.02954）——本章的配置表、多步学习率与两阶段微调均出自此文。</li>
+            <li>Ainslie et al. <a href="https://arxiv.org/abs/2305.13245">GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints</a>（arXiv:2305.13245）——GQA 的原始提出。</li>
+            <li>Rafailov et al. <a href="https://arxiv.org/abs/2305.18290">Direct Preference Optimization</a>（arXiv:2305.18290）——DPO 损失函数的原始推导。</li>
+            <li>Touvron et al. <a href="https://arxiv.org/abs/2307.09288">Llama 2</a>（arXiv:2307.09288）——用于对照的 LLaMA 2 配置。</li>
+        </ul>
+        <p class="note">核心配置表（层数、隐藏维度、头数、词表）与两阶段微调、多步学习率调度均出自 DeepSeek LLM 论文；“GQA 性能退化不足 1%”为对论文实验结论的经验性概述。GQA 示意图为<strong>教学示意</strong>，用少量节点代表头与分组，不按实际 32/4 数量绘制。</p>
+
         <div class="footer-nav">
             <a href="01.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="03.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var H = 32, s = document.getElementById('gqa-status');
+    if (!s) { return; }
+    var btns = document.querySelectorAll('.kv-widget button[data-g]');
+    function render(g) {
+        var r = g / H;
+        s.textContent = 'H=32，g=' + g + '：KV Cache 为 MHA 的 ' + (r * 100).toFixed(1) + '%，节省 ' + ((1 - r) * 100).toFixed(1) + '%\u3002';
+    }
+    function set(g, btn) {
+        for (var i = 0; i < btns.length; i++) { btns[i].setAttribute('aria-pressed', btns[i] === btn ? 'true' : 'false'); }
+        render(g);
+    }
+    for (var i = 0; i < btns.length; i++) {
+        (function (b) { b.addEventListener('click', function () { set(parseInt(b.getAttribute('data-g'), 10), b); }); })(btns[i]);
+    }
+    render(4);
+})();
+</script>
 </body>
 </html>

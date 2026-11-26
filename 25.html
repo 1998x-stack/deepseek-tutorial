@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第25章 API最佳实践</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第25章 API最佳实践</h1>
+            <p class="dek">兼容 OpenAI 只是入场券。上下文缓存、模型分级、Function Calling 与 Batch API 组合起来，才是把 API 成本压下来的真正工程实践。</p>
+        </header>
 
         <p>2025 年初，我接手了一个自动化客服项目。团队之前用其他模型 API，每月的成本高得吓人——光一个知识库问答功能，月消耗就超过 2000 美元。我看了看他们的调用日志，发现大部分请求都是重复的文档查询，而且他们每次都在用满血版的 R1 做最简单的分类任务——就像开着法拉利去买菜。</p>
 
@@ -56,7 +59,9 @@
 
         <p>DeepSeek 提供了完全兼容 OpenAI 格式的 API，这意味着你可以在<strong>不修改任何代码</strong>的情况下，把调用的 base_url 从 <code>https://api.openai.com</code> 改成 DeepSeek 的地址即可。如果你用过 OpenAI API，上手 DeepSeek 只需要 30 秒。</p>
 
-        <pre><code>import openai  # 或者用 httpx 直接请求
+        <p>本章涉及的底层模型可参见官方技术报告：DeepSeek-V3（<a href="https://arxiv.org/abs/2412.19437">arXiv:2412.19437</a>）与 DeepSeek-R1（<a href="https://arxiv.org/abs/2501.12948">arXiv:2501.12948</a>）。</p>
+
+        <pre style="overflow-x:auto"><code>import openai  # 或者用 httpx 直接请求
 
 client = openai.OpenAI(
     api_key="sk-your-deepseek-api-key",
@@ -114,7 +119,7 @@ print(response.choices[0].message.content)</code></pre>
 
         <p>DeepSeek 的 Function Calling 支持与 OpenAI 完全兼容。下面是一个查询实时天气的示例：</p>
 
-        <pre><code>functions = [
+        <pre style="overflow-x:auto"><code>functions = [
     {
         "type": "function",
         "function": {
@@ -196,7 +201,7 @@ else:
 
         <p>用清晰的层次结构组织 system prompt，比一大段自然语言描述有效得多：</p>
 
-        <pre><code>system_prompt = """
+        <pre style="overflow-x:auto"><code>system_prompt = """
 # 角色
 你是一名资深技术文档写手，负责将复杂的技术概念转化为易于理解的教程。
 
@@ -221,7 +226,7 @@ else:
 
         <p>对于格式要求高的任务，给出 2-3 个完整的输入-输出示例（few-shot）可以大幅提升一致性。注意示例要覆盖边界情况：</p>
 
-        <pre><code>messages = [
+        <pre style="overflow-x:auto"><code>messages = [
     {"role": "system", "content": "你将用户的问题分类到以下类别：技术咨询、账单问题、产品建议、其他。输出格式：仅输出类别名称。"},
     {"role": "user", "content": "我的 API 返回 500 错误了"},
     {"role": "assistant", "content": "技术咨询"},
@@ -237,7 +242,7 @@ else:
 
         <p>对于多步推理任务，在 Prompt 中加入"请一步一步思考"能显著提升准确率。DeepSeek-R1 本身已经内置了 CoT 能力，但对于 deepseek-chat 模型，显式引导仍然有效：</p>
 
-        <pre><code>prompt = """请解决以下问题。在给出最终答案前，先一步一步推理解题过程。
+        <pre style="overflow-x:auto"><code>prompt = """请解决以下问题。在给出最终答案前，先一步一步推理解题过程。
 
 问题：一个水池，甲管单独注水需要 3 小时注满，乙管单独注水需要 6 小时注满。如果两管同时打开，需要多长时间注满？
 
@@ -250,7 +255,36 @@ else:
 
         <p>上下文缓存的典型场景是<strong>知识库问答</strong>——你把一份 50 页的企业文档作为系统上下文，用户针对这份文档提各种问题。如果不使用缓存，每次请求都要重新处理这 50 页的 token，非常浪费。</p>
 
-        <pre><code>import hashlib
+        <figure>
+            <svg role="img" aria-labelledby="cache-title cache-desc" viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+                <title id="cache-title">上下文缓存：同一前缀只需处理一次</title>
+                <desc id="cache-desc">两个知识库问答请求共享同一段系统提示词与文档前缀。无缓存时每个请求都重算整段前缀；开启缓存后前缀命中缓存免重算，只处理新增的用户问题。</desc>
+                <rect width="760" height="300" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif">
+                    <text x="40" y="30" font-size="13" fill="#4c1d95">每个请求 = 共享前缀（system + 文档） + 各自的用户问题</text>
+                    <!-- row 1 -->
+                    <text x="40" y="66" font-size="12" fill="#64748b">无缓存</text>
+                    <rect x="40" y="76" width="470" height="44" rx="8" fill="#e9d5ff" stroke="#a855f7" stroke-width="2"/>
+                    <text x="275" y="103" font-size="12" fill="#6b21a8" text-anchor="middle">系统提示 + 50 页文档（每次重算）</text>
+                    <rect x="510" y="76" width="150" height="44" rx="8" fill="#ccfbf1" stroke="#0d9488" stroke-width="2"/>
+                    <text x="585" y="103" font-size="12" fill="#0f766e" text-anchor="middle">用户问题</text>
+                    <text x="675" y="103" font-size="12" fill="#b91c1c">浪费</text>
+                    <!-- row 2 -->
+                    <text x="40" y="166" font-size="12" fill="#64748b">有缓存</text>
+                    <rect x="40" y="176" width="470" height="44" rx="8" fill="#faf5ff" stroke="#a855f7" stroke-width="2" stroke-dasharray="6 4"/>
+                    <text x="275" y="203" font-size="12" fill="#6b21a8" text-anchor="middle">同一前缀命中缓存（免重算）</text>
+                    <rect x="510" y="176" width="150" height="44" rx="8" fill="#0d9488"/>
+                    <text x="585" y="203" font-size="12" fill="#ffffff" text-anchor="middle">只算新 token</text>
+                    <text x="675" y="203" font-size="12" fill="#0f766e">省下</text>
+                    <!-- link -->
+                    <line x1="348" y1="120" x2="348" y2="176" stroke="#7c3aed" stroke-width="2" stroke-dasharray="4 4"/>
+                    <text x="380" y="264" font-size="11" fill="#64748b">前缀越长、请求次数越多，缓存命中带来的输入 token 节省越大。关键词：相同前缀才可复用。</text>
+                </g>
+            </svg>
+            <figcaption>上下文缓存的本质是“不重复处理相同前缀”：当多个请求共享同一段 system prompt 与文档上下文时，已处理过的前缀可直接命中缓存，只有新增的用户问题需要计算。这也是知识库问答场景能大幅降低输入 token 成本的原因。</figcaption>
+        </figure>
+
+        <pre style="overflow-x:auto"><code>import hashlib
 import diskcache as dc
 
 # 使用本地磁盘缓存
@@ -289,7 +323,7 @@ def get_response_with_cache(messages, model="deepseek-chat", ttl=3600):
 
         <p>JSON Mode 让模型<strong>强制输出合法 JSON</strong>，是结构化数据提取的利器。DeepSeek 的 JSON Mode 通过在 system prompt 中加入特定指令来触发：</p>
 
-        <pre><code>response = client.chat.completions.create(
+        <pre style="overflow-x:auto"><code>response = client.chat.completions.create(
     model="deepseek-chat",
     messages=[
         {
@@ -318,6 +352,40 @@ print(result)
         <h2>25.6 API 成本优化</h2>
 
         <p>最后来算一笔账。假设你的应用每天处理 10 万次请求，每次请求平均输入 2000 token、输出 500 token：</p>
+
+        <div class="math-equation">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="API 成本估算公式，可横向滚动">
+                <math display="block" aria-label="总成本等于请求数乘以每请求输入成本与输出成本之和">
+                    <mrow>
+                        <mi>C</mi><mo>=</mo><mi>N</mi><mo>&#x00D7;</mo><mo>(</mo>
+                        <mfrac><msub><mi>T</mi><mtext>in</mtext></msub><msup><mn>10</mn><mn>6</mn></msup></mfrac>
+                        <mo>&#x00D7;</mo><msub><mi>p</mi><mtext>in</mtext></msub>
+                        <mo>+</mo>
+                        <mfrac><msub><mi>T</mi><mtext>out</mtext></msub><msup><mn>10</mn><mn>6</mn></msup></mfrac>
+                        <mo>&#x00D7;</mo><msub><mi>p</mi><mtext>out</mtext></msub>
+                        <mo>)</mo>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
+        <div class="kv-widget">
+            <p><strong>API 成本沙盘：</strong>按本章表格所列价格（deepseek-chat 输入 $0.27 / 输出 $1.10 每百万 token）估算日/月成本（每月按 30 天）。<strong>教学示意</strong>，未含上下文缓存与 Batch API 的折扣。</p>
+            <div class="kv-controls">
+                <label>日请求数 <input id="api-n" type="number" min="0" step="1000" value="100000"></label>
+                <label>输入 token <input id="api-tin" type="number" min="0" step="100" value="2000"></label>
+                <label>输出 token <input id="api-tout" type="number" min="0" step="100" value="500"></label>
+            </div>
+            <div class="kv-controls">
+                <label>p_in ($/M) <input id="api-pin" type="number" min="0" step="0.01" value="0.27"></label>
+                <label>p_out ($/M) <input id="api-pout" type="number" min="0" step="0.01" value="1.10"></label>
+            </div>
+            <div class="kv-controls">
+                <button type="button" data-pin="0.27" data-pout="1.10" aria-pressed="true">deepseek-chat</button>
+                <button type="button" data-pin="0.55" data-pout="2.19" aria-pressed="false">deepseek-reasoner</button>
+            </div>
+            <p class="kv-status" id="api-status" role="status" aria-live="polite"></p>
+        </div>
 
         <table>
             <tr>
@@ -374,8 +442,33 @@ print(result)
             <a href="index.html">📖 返回目录</a>
             <a href="26.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var n = document.getElementById('api-n'), ti = document.getElementById('api-tin'), to = document.getElementById('api-tout'), pi = document.getElementById('api-pin'), po = document.getElementById('api-pout'), s = document.getElementById('api-status');
+    if (!n || !ti || !to || !pi || !po || !s) { return; }
+    function usd(v) { return '$' + v.toFixed(2); }
+    function render() {
+        var N = Math.max(0, parseFloat(n.value) || 0), Ti = Math.max(0, parseFloat(ti.value) || 0), To = Math.max(0, parseFloat(to.value) || 0), Pi = Math.max(0, parseFloat(pi.value) || 0), Po = Math.max(0, parseFloat(po.value) || 0);
+        var perReq = Ti / 1e6 * Pi + To / 1e6 * Po, daily = perReq * N, monthly = daily * 30;
+        s.textContent = '单请求 ≈ ' + usd(perReq) + '；日成本 ≈ ' + usd(daily) + '；月成本 ≈ ' + usd(monthly) + '（按 30 天）。';
+    }
+    var fields = [n, ti, to, pi, po];
+    for (var i = 0; i < fields.length; i++) { fields[i].addEventListener('input', render); }
+    var btns = document.querySelectorAll('.kv-widget button[data-pin]');
+    for (var k = 0; k < btns.length; k++) {
+        (function (b) {
+            b.addEventListener('click', function () {
+                pi.value = b.getAttribute('data-pin'); po.value = b.getAttribute('data-pout');
+                for (var m = 0; m < btns.length; m++) { btns[m].setAttribute('aria-pressed', btns[m] === b ? 'true' : 'false'); }
+                render();
+            });
+        })(btns[k]);
+    }
+    render();
+})();
+</script>
 </body>
 </html>

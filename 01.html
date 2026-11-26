@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html" class="active">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第1章 大模型效率困境</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第1章 大模型效率困境</h1>
+            <p class="dek">在算力与数据的军备竞赛里，先看清大模型的成本到底卡在哪里——这是理解 DeepSeek 一切技术选择的起点。</p>
+        </header>
 
         <p>大家好，欢迎来到 DeepSeek 系列教程。在开始第一节课之前，我想先请你想象一个场景：你是一家创业公司的 CTO，想用开源大模型搭建一个智能客服系统。你打开 Hugging Face，LLaMA 3 405B 的参数下载包足足 800 多 GB——光下载就要两天。你咬牙租了 8 张 A100，跑推理时却发现生成一个 token 慢得像在挤牙膏。你查了一下训练成本，好家伙，Meta 在这一个模型上烧了超过 1 亿美元。</p>
 
@@ -109,6 +112,37 @@
             </tr>
         </table>
 
+        <figure>
+            <svg role="img" aria-labelledby="cost-title cost-desc" viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+                <title id="cost-title">典型大模型估计训练成本对比</title>
+                <desc id="cost-desc">以百万美元为同一标尺的横向柱状图：GPT-3 约 12，PaLM 约 50，GPT-4 与 LLaMA 3 405B 均约 100 以上，DeepSeek-V3 约 5.6。DeepSeek-V3 的柱高约为 LLaMA 3 405B 的十八分之一。</desc>
+                <rect width="760" height="300" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif">
+                    <line x1="130" y1="24" x2="130" y2="262" stroke="#c4b5fd"/>
+                    <text x="130" y="16" font-size="11" fill="#64748b">估计训练成本（百万美元，同一标尺）</text>
+                    <g font-size="12" fill="#3b0764" text-anchor="end">
+                        <text x="120" y="46">GPT-3</text><text x="120" y="88">PaLM</text>
+                        <text x="120" y="130">GPT-4*</text><text x="120" y="172">LLaMA 3 405B</text>
+                        <text x="120" y="214">DeepSeek-V3</text>
+                    </g>
+                    <g fill="#8b5cf6">
+                        <rect x="130" y="34" width="71" height="20" rx="5"/>
+                        <rect x="130" y="76" width="295" height="20" rx="5"/>
+                        <rect x="130" y="118" width="590" height="20" rx="5"/>
+                        <rect x="130" y="160" width="590" height="20" rx="5"/>
+                    </g>
+                    <rect x="130" y="202" width="33" height="20" rx="5" fill="#0d9488"/>
+                    <g font-size="12" fill="#4c1d95">
+                        <text x="207" y="49">~12</text><text x="431" y="91">~50</text>
+                        <text x="726" y="133">~100+</text><text x="726" y="175">~100+</text>
+                        <text x="171" y="217" fill="#0f766e">~5.6</text>
+                    </g>
+                    <text x="130" y="252" font-size="11" fill="#64748b">*GPT-4 参数与成本为业界传闻，非官方数字。</text>
+                </g>
+            </svg>
+            <figcaption>同一标尺下，前沿稠密模型的估计训练成本普遍在数千万到上亿美元量级，而 DeepSeek-V3 的公开口径约为 557 万美元。DeepSeek 的目标不是把模型做得更大，而是把“每单位能力”的成本降下来。</figcaption>
+        </figure>
+
         <div class="highlight">
             <strong>有意思的对比：</strong>DeepSeek-V3 的成本只有 LLaMA 3 405B 的十八分之一，但性能在多组评测中全面超越。这好比别人开着法拉利在赛道狂奔，每公里油耗惊人；DeepSeek 却造了一辆混动车，用更少的油跑了更远的路。
         </div>
@@ -130,6 +164,16 @@
         <p>OpenAI 在 2020 年的 Scaling Law 论文中给出了一个简洁到令人惊叹的公式：</p>
 
         <pre><code>C = 6 × N × D</code></pre>
+
+        <div class="math-equation">
+            <div class="math-scroll" data-math-scroll tabindex="0" role="region" aria-label="缩放律计算量公式，可横向滚动">
+                <math display="block" aria-label="总计算量 C 等于 6 乘以模型参数量 N 乘以训练数据量 D">
+                    <mrow>
+                        <mi>C</mi><mo>=</mo><mn>6</mn><mo>&#x00D7;</mo><mi>N</mi><mo>&#x00D7;</mo><mi>D</mi>
+                    </mrow>
+                </math>
+            </div>
+        </div>
 
         <p>其中：
         <br>C —— 总计算量（FLOPs）
@@ -154,6 +198,20 @@
         <pre><code>C = M × D</code></pre>
 
         <p>其中 M 是一个与模型架构和硬件效率相关的动态系数，而非固定的常数 6。这个修正看似简单，背后的意义却很深远——它意味着 Scaling Law 并非铁律，模型效率还有巨大的优化空间。你不需要盲目扩大参数量和计算量，而是可以通过更聪明的架构和更高效的实现，用更少的资源达到同样的效果。</p>
+
+        <div class="kv-widget">
+            <p><strong>缩放律沙盘：</strong>输入参数量 N（十亿）与数据量 D（十亿 token），按经典公式 <code>C = 6ND</code> 估算前向+反向的乘加计算量（以 FLOPs 计）。这是<strong>教学示意</strong>，未计入注意力的序列二次项与稀疏激活。</p>
+            <div class="kv-controls">
+                <button type="button" data-n="7" data-d="2000">V1 7B / 2T</button>
+                <button type="button" data-n="67" data-d="2000">V1 67B / 2T</button>
+                <button type="button" data-n="671" data-d="14800">V3 671B / 14.8T</button>
+            </div>
+            <div class="kv-controls">
+                <label>N（B） <input id="sl-n" type="number" min="1" max="2000" step="1" value="67"></label>
+                <label>D（B token） <input id="sl-d" type="number" min="1" max="20000" step="1" value="2000"></label>
+            </div>
+            <p class="kv-status" id="sl-status" role="status" aria-live="polite"></p>
+        </div>
 
         <div class="warning">
             <strong>业界教训：</strong>许多团队盲目迷信 Scaling Law，认为"只要堆算力就能出效果"。结果花了几百万美元训练出来的模型，性能还不如精心调优的小模型。DeepSeek 用这个修正公式提醒我们——效率，才是下一代大模型的核心竞争力。
@@ -323,13 +381,44 @@
 
         <p>下一章，我们将回到一切的起点——<strong>DeepSeek LLM (V1)</strong>，看看这个初代模型是如何构建、训练，以及它为我们后续所有的技术演进打下了什么样的基础。让我们继续前进，一起探索 DeepSeek 的技术宇宙。</p>
 
+        <h2>1.7 参考文献与延伸</h2>
+        <ul>
+            <li>Kaplan et al. <a href="https://arxiv.org/abs/2001.08361">Scaling Laws for Neural Language Models</a>（arXiv:2001.08361）——C = 6ND 的来源。</li>
+            <li>Hoffmann et al. <a href="https://arxiv.org/abs/2203.15556">Training Compute-Optimal Large Language Models</a>（arXiv:2203.15556）——N 与 D 需按比例增长。</li>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2401.02954">DeepSeek LLM: Scaling Open-Source Language Models with Longtermism</a>（arXiv:2401.02954）——修正缩放律与 V1 基座。</li>
+        </ul>
+        <p class="note">本章的训练成本数字来自公开报道与论文披露，均为<strong>估计值</strong>；图中柱高按同一标尺绘制，GPT-4 的 1.8T 参数与 $100M+ 成本属业界传闻，非官方确认；"小模型上 C = 6ND 偏差约 50%" 引自 DeepSeek LLM 论文的缩放律分析。沙盘按经典公式演示，属<strong>教学示意</strong>。</p>
+
         <div class="footer-nav">
             <a href="javascript:void(0)">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="02.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var n = document.getElementById('sl-n'), d = document.getElementById('sl-d'), s = document.getElementById('sl-status');
+    if (!n || !d || !s) { return; }
+    function fmt(x) {
+        var e = Math.floor(Math.log10(x));
+        return (x / Math.pow(10, e)).toFixed(2) + ' \u00d7 10^' + e;
+    }
+    function render() {
+        var N = parseFloat(n.value) || 0, D = parseFloat(d.value) || 0;
+        s.textContent = 'C = 6 \u00d7 ' + N + 'B \u00d7 ' + D + 'B = ' + fmt(6 * N * D * 1e18) + ' FLOPs\u3002';
+    }
+    n.addEventListener('input', render);
+    d.addEventListener('input', render);
+    var presets = document.querySelectorAll('.kv-controls button[data-n]');
+    for (var i = 0; i < presets.length; i++) {
+        presets[i].addEventListener('click', (function (btn) {
+            return function () { n.value = btn.getAttribute('data-n'); d.value = btn.getAttribute('data-d'); render(); };
+        })(presets[i]));
+    }
+    render();
+})();
+</script>
 </body>
 </html>

@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第24章 微调适配</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第24章 微调适配</h1>
+            <p class="dek">全量微调、LoRA 还是 QLoRA？微调 DeepSeek 的胜负手往往不在算力，而在低秩更新的结构、数据质量与评估闭环。</p>
+        </header>
 
         <p>我曾经帮一家法律科技公司做咨询。他们的需求很明确：用 DeepSeek 做合同审查助手，能自动识别赔偿条款、违约责任、保密协议等关键信息。他们试了直接 prompt——结果模型答得像一个刚毕业的法学生，法律条文引用得很漂亮，但落到具体合同上就频频"翻车"。他们问我："能不能让模型更懂法律？"</p>
 
@@ -118,6 +121,35 @@
         <p>训练时的前向传播就变成：</p>
 
         <pre><code>h = Wx + ΔWx = Wx + (A × B)x</code></pre>
+
+        <figure>
+            <svg role="img" aria-labelledby="lora-title lora-desc" viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
+                <title id="lora-title">LoRA 将权重更新分解为两个低秩矩阵</title>
+                <desc id="lora-desc">冻结的原权重 W（d×k）保持不变；权重更新量 ΔW 被分解为 A（d×r）与 B（r×k）两个低秩矩阵的乘积。因为 r 远小于 d、k，可训练参数从 d×k 降到 d×r + r×k。</desc>
+                <rect width="760" height="280" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif">
+                    <rect x="40" y="70" width="150" height="140" rx="8" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+                    <text x="115" y="52" font-size="13" fill="#4c1d95" text-anchor="middle">冻结 W（d×k）</text>
+                    <text x="115" y="135" font-size="12" fill="#5b21b6" text-anchor="middle">不更新</text>
+                    <text x="115" y="153" font-size="11" fill="#7c3aed" text-anchor="middle">100% 参数</text>
+                    <text x="215" y="145" font-size="26" fill="#6d28d9" text-anchor="middle">+</text>
+                    <rect x="250" y="100" width="44" height="110" rx="6" fill="#ccfbf1" stroke="#0d9488" stroke-width="2"/>
+                    <text x="272" y="90" font-size="12" fill="#0f766e" text-anchor="middle">A</text>
+                    <text x="272" y="230" font-size="11" fill="#0f766e" text-anchor="middle">d×r</text>
+                    <text x="312" y="160" font-size="20" fill="#0f766e" text-anchor="middle">×</text>
+                    <rect x="334" y="100" width="72" height="110" rx="6" fill="#ccfbf1" stroke="#0d9488" stroke-width="2"/>
+                    <text x="370" y="90" font-size="12" fill="#0f766e" text-anchor="middle">B</text>
+                    <text x="370" y="230" font-size="11" fill="#0f766e" text-anchor="middle">r×k</text>
+                    <text x="436" y="160" font-size="20" fill="#6d28d9" text-anchor="middle">=</text>
+                    <rect x="470" y="70" width="150" height="140" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4"/>
+                    <text x="545" y="52" font-size="13" fill="#92400e" text-anchor="middle">ΔW = A·B（d×k）</text>
+                    <text x="545" y="135" font-size="12" fill="#92400e" text-anchor="middle">只训练 A、B</text>
+                    <text x="545" y="153" font-size="11" fill="#b45309" text-anchor="middle">r 越小参数越少</text>
+                    <text x="380" y="264" font-size="11" fill="#64748b" text-anchor="middle">d、k 是权重维度；r 是秩，通常取 8、16、32，远小于 d、k。前向计算 Wx + (AB)x，推理时可把 AB 合并回 W，不增加延迟。</text>
+                </g>
+            </svg>
+            <figcaption>LoRA 的核心：冻结原权重 W，只学习低秩增量 ΔW = A·B。可训练参数从 d×k 降到 d×r + r×k；当 r 远小于 d、k 时，训练参数量只有总量的千分之一量级，而推理延迟不变。</figcaption>
+        </figure>
 
         <p>训练时只更新 A 和 B，W 保持冻结。推理时可以把 A×B 合并回 W 中，<strong>不会增加任何推理延迟</strong>——这是 LoRA 的杀手锏优势。</p>
 
@@ -410,7 +442,7 @@ print(f"平均 BERTScore F1: {F1.mean():.3f}")</code></pre>
             <a href="index.html">📖 返回目录</a>
             <a href="25.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>

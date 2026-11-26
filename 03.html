@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第3章 10万BPE词表</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第3章 10万BPE词表</h1>
+            <p class="dek">把词表从 3.2 万扩到 10 万，是一次用 embedding 参数换序列长度的交易——中文因此少了近三分之一的 token。</p>
+        </header>
 
         <p>大家好，欢迎回到 DeepSeek 系列教程。上一章我们详细拆解了 DeepSeek LLM (V1) 的架构和训练策略。你可能注意到了——DeepSeek 7B 的词表大小是 102,400，而 LLaMA 只有 32,000。三倍多的差距，意味着 embedding 层的参数量是 LLaMA 的三倍还多。为什么 DeepSeek 要做这个看似"浪费"的选择？</p>
 
@@ -58,7 +61,7 @@
 
         <p>BPE 的核心思想很简单：<strong>从字符（byte）开始，反复合并出现频率最高的相邻字符对，直到达到预设的词表大小。</strong></p>
 
-        <pre><code>BPE 训练过程示例（简化版）:
+        <pre style="overflow-x:auto"><code>BPE 训练过程示例（简化版）:
 
 初始词表：{'a', 'b', 'c', 'd', 'e', 't', 'h', 'i', 's', 'n', ' '}
 
@@ -108,6 +111,7 @@ Step 2: 重新统计
 
         <p>首先，更大的词表意味着更少的分词数量，直接降低推理成本：</p>
 
+        <div style="overflow-x:auto">
         <table>
             <tr>
                 <th>词表大小</th>
@@ -138,10 +142,32 @@ Step 2: 重新统计
                 <td>419M</td>
             </tr>
         </table>
+        </div>
 
         <p>从数据中我们可以看到一个清晰趋势：<strong>词表从 32K 扩大到 100K 后，中文文本的 token 数减少了约 31%。</strong>对于需要处理大量中文的场景（如中文客服、中文文档生成），这就意味着推理成本直接降低了近三分之一。</p>
 
         <p>但代价也很直接：embedding 层的参数量从 134M 增加到 419M。不过，embedding 层的计算主要是查表操作，实际计算量占比很小——对于 7B 参数的总模型，419M 只占总参数的 6%。作为对比，FFN 和注意力层占 90% 以上。</p>
+
+        <div class="math-equation">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="嵌入层参数量公式，可横向滚动">
+                <math display="block" aria-label="嵌入层参数量等于词表大小 V 乘以隐藏维度 d model">
+                    <mrow>
+                        <msub><mi>P</mi><mtext>emb</mtext></msub><mo>=</mo><mi>V</mi><mo>&#x00D7;</mo><msub><mi>d</mi><mtext>model</mtext></msub>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
+        <div class="kv-widget">
+            <p><strong>词表-参数沙盘：</strong>固定隐藏维度 d=4096（<strong>教学示意</strong>），切换词表大小 V，观察共享嵌入与 LM Head 的参数量如何随 V 线性增长。</p>
+            <div class="kv-controls">
+                <button type="button" data-v="32768" aria-pressed="true">32K</button>
+                <button type="button" data-v="65536">64K</button>
+                <button type="button" data-v="102400">100K</button>
+                <button type="button" data-v="128000">128K</button>
+            </div>
+            <p class="kv-status" id="vocab-status" role="status" aria-live="polite"></p>
+        </div>
 
         <div class="warning">
             <strong>计算细节：</strong>你可能觉得增大词表会让 softmax 输出层更昂贵。没错，LM Head（将 hidden state 映射到词表概率）是一个 [d_model, vocab_size] 的矩阵乘法。当 vocab_size=100K、d_model=4096 时，这个矩阵是 4096 x 102400，约 419M 参数。在训练时每个 token 都要做一次这个矩阵乘法——但现代实现（如 Megatron 的张量并行）可以有效分摊这个开销。推理时，LM Head 通常用 GPU 的高并行矩阵乘完成，对延迟的影响很小。
@@ -151,7 +177,7 @@ Step 2: 重新统计
 
         <p>让我们用实际的中文和英文文本来对比不同词表的编码效果：</p>
 
-        <pre><code>输入文本: "DeepSeek 是一家专注于人工智能研究和开发的公司"
+        <pre style="overflow-x:auto"><code>输入文本: "DeepSeek 是一家专注于人工智能研究和开发的公司"
 
 LLaMA 32K 词表编码:
 ["Deep", "Se", "ek", " 是", "一", "家", "专", "注", "于", "人", "工",
@@ -164,11 +190,39 @@ DeepSeek 100K 词表编码:
 
 token 数减少: 57%</code></pre>
 
+        <figure>
+            <svg role="img" aria-labelledby="tok-title tok-desc" viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg">
+                <title id="tok-title">同一句中文在不同词表下的切分</title>
+                <desc id="tok-desc">短语“人工智能研究和开发”在 32K 词表下被切成“人、工、智、能、研、究、和、开、发”9 个 token；在 100K 词表下被切成“人工智能、研究和、开发”3 个 token。同样的字符，后者只需三分之一的序列长度。</desc>
+                <rect width="760" height="250" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif">
+                    <text x="20" y="62" font-size="13" font-weight="600" fill="#b91c1c">32K 词表</text>
+                    <text x="20" y="166" font-size="13" font-weight="600" fill="#0f766e">100K 词表</text>
+                    <g fill="#fee2e2" stroke="#ef4444">
+                        <rect x="110" y="40" width="40" height="40" rx="6"/><rect x="150" y="40" width="40" height="40" rx="6"/><rect x="190" y="40" width="40" height="40" rx="6"/><rect x="230" y="40" width="40" height="40" rx="6"/><rect x="270" y="40" width="40" height="40" rx="6"/><rect x="310" y="40" width="40" height="40" rx="6"/><rect x="350" y="40" width="40" height="40" rx="6"/><rect x="390" y="40" width="40" height="40" rx="6"/><rect x="430" y="40" width="40" height="40" rx="6"/>
+                    </g>
+                    <g font-size="15" fill="#7f1d1d" text-anchor="middle">
+                        <text x="130" y="66">人</text><text x="170" y="66">工</text><text x="210" y="66">智</text><text x="250" y="66">能</text><text x="290" y="66">研</text><text x="330" y="66">究</text><text x="370" y="66">和</text><text x="410" y="66">开</text><text x="450" y="66">发</text>
+                    </g>
+                    <text x="486" y="66" font-size="12" fill="#b91c1c">9 个 token</text>
+                    <g fill="#ccfbf1" stroke="#0d9488">
+                        <rect x="110" y="130" width="160" height="40" rx="8"/><rect x="274" y="130" width="120" height="40" rx="8"/><rect x="398" y="130" width="72" height="40" rx="8"/>
+                    </g>
+                    <g font-size="15" fill="#115e59" text-anchor="middle">
+                        <text x="190" y="156">人工智能</text><text x="334" y="156">研究和</text><text x="434" y="156">开发</text>
+                    </g>
+                    <text x="486" y="156" font-size="12" fill="#0f766e">3 个 token</text>
+                    <text x="110" y="215" font-size="12" fill="#64748b">同样的字符序列，100K 词表把它合并成语义完整的词元，序列长度降到三分之一。</text>
+                </g>
+            </svg>
+            <figcaption>词表越大，越可能出现“一个词 = 一个 token”。这既减少了模型为拼接语义所需的注意力步数，也直接缩短了推理时的序列长度——这就是中文场景下大词表最直观的收益。</figcaption>
+        </figure>
+
         <p>这个对比非常直观——在 DeepSeek 的词表中，"DeepSeek"、"人工智能"、"专注于"等常见的中英文词汇都作为完整的 token 存在。模型不需要通过注意力机制将分散的字符拼凑起来理解这些概念，它的学习负担大大降低了。</p>
 
         <p>我再来测一段纯英文：</p>
 
-        <pre><code>输入文本: "The Transformer architecture has revolutionized natural language processing"
+        <pre style="overflow-x:auto"><code>输入文本: "The Transformer architecture has revolutionized natural language processing"
 
 LLaMA 32K 词表编码:
 ["The", " Transformer", " architecture", " has", " revolutionized",
@@ -200,6 +254,7 @@ DeepSeek 100K 词表编码:
             <li><strong>首 token 延迟略高</strong>——LM Head 计算稍大，但 Prefill 阶段是 compute-bound，影响有限</li>
         </ul>
 
+        <div style="overflow-x:auto">
         <table>
             <tr>
                 <th>指标</th>
@@ -238,6 +293,7 @@ DeepSeek 100K 词表编码:
                 <td>但被 tensor parallelism 分摊</td>
             </tr>
         </table>
+        </div>
 
         <div class="highlight">
             <strong>行业影响：</strong>DeepSeek 的 100K 词表设计在发布后引发了一波效仿潮。Qwen 2.5 将词表从 50K 扩大到 150K，Yi 系列使用了 64K 词表，甚至 LLaMA 3 也将词表从 32K 扩大到 128K。可以说，DeepSeek 用实际效果证明了——对于中文大模型，"大词表"不是可选项，而是必选项。现在业界几乎已经形成共识：面向多语言（尤其是中文）的大模型，词表至少应该在 100K 以上。
@@ -271,13 +327,43 @@ DeepSeek 100K 词表编码:
 
         <p>词表只是数据管线的第一环。要训练一个高质量的双语模型，除了分词，我们还需要考虑数据的来源、清洗、去重、配比等一系列问题。下一章，我们就来深入探讨 DeepSeek 的<strong>数据管线构建</strong>——如何从海量的互联网数据中筛选出高质量的预训练语料，如何平衡中英文的比例，以及数据质量对模型性能的定量影响。敬请期待。</p>
 
+        <h2>3.7 参考文献与延伸</h2>
+        <ul>
+            <li>Sennrich et al. <a href="https://arxiv.org/abs/1508.07909">Neural Machine Translation of Rare Words with Subword Units</a>（arXiv:1508.07909）——BPE 引入 NLP 的经典论文。</li>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2401.02954">DeepSeek LLM</a>（arXiv:2401.02954）——10 万 BPE 词表的系统性实验与选择依据。</li>
+            <li>Touvron et al. <a href="https://arxiv.org/abs/2302.13971">LLaMA</a>（arXiv:2302.13971）——32K 词表基线。</li>
+            <li>Dubey et al. <a href="https://arxiv.org/abs/2407.21783">The Llama 3 Herd of Models</a>（arXiv:2407.21783）——把词表扩到 128K 的后续实践。</li>
+        </ul>
+        <p class="note">表中 Embedding/LM Head 参数量按 <strong>P = V × 4096</strong> 精确计算，可直接核对；“中文 token/字符比”与“平均 token 长度”为<strong>教学示意</strong>性估计，实际值随分词器与语料分布而异；文中“神经网络”4→1 的切分为举例说明。词表大小与超参选择的结论引自 DeepSeek LLM 论文。</p>
+
         <div class="footer-nav">
             <a href="02.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="04.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var d = 4096, s = document.getElementById('vocab-status');
+    if (!s) { return; }
+    var btns = document.querySelectorAll('.kv-widget button[data-v]');
+    function fmt(x) { var e = Math.floor(Math.log10(x)); return (x / Math.pow(10, e)).toFixed(2) + '\u00d710^' + e; }
+    function render(v) {
+        var p = v * d;
+        s.textContent = 'V=' + v.toLocaleString() + '，d=4096：Embedding 参数量 = ' + fmt(p) + '（约 ' + (p / 1e6).toFixed(0) + 'M），是 32K 词表的 ' + (v / 32768).toFixed(2) + ' 倍。';
+    }
+    for (var i = 0; i < btns.length; i++) {
+        (function (b) {
+            b.addEventListener('click', function () {
+                for (var j = 0; j < btns.length; j++) { btns[j].setAttribute('aria-pressed', btns[j] === b ? 'true' : 'false'); }
+                render(parseInt(b.getAttribute('data-v'), 10));
+            });
+        })(btns[i]);
+    }
+    render(32768);
+})();
+</script>
 </body>
 </html>

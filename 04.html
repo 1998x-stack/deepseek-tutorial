@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第4章 数据管线</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第4章 数据管线</h1>
+            <p class="dek">架构是骨架、算法是肌肉，数据才是血液。从脏乱的网页到 2T 干净 token，中间是一条被反复打磨的流水线。</p>
+        </header>
 
         <p>大家好，欢迎回到 DeepSeek 系列教程。上一章我们聊了 10 万 BPE 词表的设计——那是数据进入模型前的第一步。但问题是：这些数据从哪里来？如何从浩瀚的互联网中筛选出真正高质量的训练语料？中英文数据应该按什么比例混合？</p>
 
@@ -54,6 +57,7 @@
 
         <p>DeepSeek LLM 的预训练数据总量约为 2T tokens，这是一个精心构建的多源数据集。主要来源包括：</p>
 
+        <div style="overflow-x:auto">
         <table>
             <tr>
                 <th>数据源</th>
@@ -98,6 +102,7 @@
                 <td>最新信息，口语化表达</td>
             </tr>
         </table>
+        </div>
 
         <p>这个配比反映了几个设计理念：</p>
         <ul>
@@ -114,13 +119,48 @@
 
         <p>原始互联网数据是极其肮脏的——HTML 标签、广告、垃圾信息、恶意内容、乱码、重复内容……DeepSeek 的清洗管线包含多个环节：</p>
 
+        <figure>
+            <svg role="img" aria-labelledby="pipe-title pipe-desc" viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg">
+                <title id="pipe-title">从原始网页到训练语料的处理流水线</title>
+                <desc id="pipe-desc">流水线依次为：原始网页（100%）、格式与敏感信息清洗、多维度质量评分、MinHash+LSH 去重，最终得到仅占原始数据约 10%–20% 的高质量语料。每经过一道环节，文档量都会显著缩减。</desc>
+                <rect width="760" height="240" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif" text-anchor="middle">
+                    <g stroke="#8b5cf6" stroke-width="2" fill="#ede9fe">
+                        <rect x="20" y="60" width="120" height="70" rx="12"/>
+                        <rect x="165" y="60" width="110" height="70" rx="12"/>
+                        <rect x="300" y="60" width="100" height="70" rx="12"/>
+                        <rect x="425" y="60" width="95" height="70" rx="12"/>
+                        <rect x="545" y="60" width="190" height="70" rx="12" fill="#ccfbf1" stroke="#0d9488"/>
+                    </g>
+                    <g font-size="13" fill="#3b0764">
+                        <text x="80" y="90">原始网页</text><text x="80" y="110" font-size="12">100%</text>
+                        <text x="220" y="88">清洗 +</text><text x="220" y="106">敏感过滤</text>
+                        <text x="350" y="88">质量</text><text x="350" y="106">评分</text>
+                        <text x="472" y="88">MinHash</text><text x="472" y="106">去重</text>
+                        <text x="640" y="90" fill="#115e59">高质量训练语料</text><text x="640" y="110" font-size="12" fill="#0f766e">约占原始 10%–20%</text>
+                    </g>
+                    <g stroke="#7c3aed" stroke-width="2.5" marker-end="url(#pipe-arrow)">
+                        <line x1="140" y1="95" x2="162" y2="95"/><line x1="275" y1="95" x2="297" y2="95"/><line x1="400" y1="95" x2="422" y2="95"/><line x1="520" y1="95" x2="542" y2="95"/>
+                    </g>
+                    <g font-size="11" fill="#64748b">
+                        <text x="80" y="160">约丢弃 5%–10%</text>
+                        <text x="350" y="160">大量低质文档被剔掉</text>
+                        <text x="472" y="178">去除 15%–25% 近似重复</text>
+                    </g>
+                    <text x="380" y="212" font-size="11" fill="#64748b">各环节保留比例为本章给出的近似范围，具体数值随语料与阈值而异。</text>
+                    <defs><marker id="pipe-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 z" fill="#7c3aed"/></marker></defs>
+                </g>
+            </svg>
+            <figcaption>数据管线的本质是一连串“减法”：格式与敏感信息清洗去掉垃圾，质量评分筛掉低质文档，MinHash 去重消除近重复。经过层层筛选，最终可用于训练的文本通常只占原始抓取量的 10%–20%。</figcaption>
+        </figure>
+
         <p><strong>第一阶段：格式清洗。</strong>从 CommonCrawl 获得的 raw dump 首先是 WARC 格式的压缩数据。清洗管线首先提取纯文本内容，去除 HTML 标签、script、style 等无关元素。然后进行编码检测，丢弃非 UTF-8 编码的文档。这一步大约会丢弃 5-10% 的原始数据。</p>
 
         <p><strong>第二阶段：敏感信息过滤。</strong>包括 PII（个人身份信息，如身份证号、银行卡号）的正则匹配和过滤、色情和暴力内容的检测（基于关键词 + 分类器）、以及恶意 URL 的过滤。这一步不仅是合规要求，也直接影响模型的安全性。</p>
 
         <p><strong>第三阶段：低质量文档检测。</strong>这是最关键的环节。DeepSeek 使用了一套多维度的质量评分系统：</p>
 
-        <pre><code>质量评分系统 = 加权组合多个指标:
+        <pre style="overflow-x:auto"><code>质量评分系统 = 加权组合多个指标:
 
 1. 困惑度（Perplexity）得分
    - 用预训练的 n-gram 或小语言模型评估文档的"自然度"
@@ -155,7 +195,7 @@
 
         <p><strong>模糊去重（Fuzzy Dedup via MinHash + LSH）：</strong>这是去重的主力。MinHash 是一种近似集合相似度计算方法，对一篇文档抽取 n-gram 特征集合，计算 MinHash 签名，再用 LSH（Locality Sensitive Hashing）高效地找到相似文档。</p>
 
-        <pre><code>MinHash + LSH 去重流程:
+        <pre style="overflow-x:auto"><code>MinHash + LSH 去重流程:
 
 文档 A: "深度学习是机器学习的一个分支领域..."
 文档 B: "深度学习是机器学习的重要分支..."
@@ -172,6 +212,35 @@
 
 4. 去重判定: 落入相同 bucket 的文档对 → 计算 Jaccard 相似度
    相似度 > 阈值（通常 0.8-0.85）→ 保留一篇</code></pre>
+
+        <div class="math-equation">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="Jaccard 相似度公式，可横向滚动">
+                <math display="block" aria-label="Jaccard 相似度等于 A 与 B 交集大小除以并集大小">
+                    <mrow>
+                        <mi>J</mi><mo>(</mo><mi>A</mi><mo>,</mo><mi>B</mi><mo>)</mo><mo>=</mo>
+                        <mfrac>
+                            <mrow><mo>|</mo><mi>A</mi><mo>&#x2229;</mo><mi>B</mi><mo>|</mo></mrow>
+                            <mrow><mo>|</mo><mi>A</mi><mo>&#x222A;</mo><mi>B</mi><mo>|</mo></mrow>
+                        </mfrac>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
+        <div class="kv-widget">
+            <p><strong>Jaccard 去重沙盘：</strong>给定两篇文档的 5-gram 集合大小 |A|、|B| 与交集 |A∩B|，计算相似度 J = |A∩B| / (|A|+|B|−|A∩B|)（<strong>教学示意</strong>）。这里把阈值取为 0.8，J 超过阈值即判为重复。</p>
+            <div class="kv-controls">
+                <button type="button" data-a="100" data-b="100" data-i="20" aria-pressed="true">低相似</button>
+                <button type="button" data-a="100" data-b="100" data-i="80">接近阈值</button>
+                <button type="button" data-a="100" data-b="100" data-i="90">判为重复</button>
+            </div>
+            <div class="kv-controls">
+                <label>|A| <input id="j-a" type="number" min="1" value="100"></label>
+                <label>|B| <input id="j-b" type="number" min="1" value="100"></label>
+                <label>|A∩B| <input id="j-i" type="number" min="0" value="20"></label>
+            </div>
+            <p class="kv-status" id="j-status" role="status" aria-live="polite"></p>
+        </div>
 
         <p>模糊去重的效果非常显著——能消除约 15-25% 的近似重复数据。而且因为去掉了大量相似但不完全相同的"变体"，模型学到的知识更加纯净，不会因为重复而放大某些特定表述的权重。</p>
 
@@ -197,6 +266,7 @@
 
         <p>这个配比的逻辑是：<strong>英文能力是中文能力的基础。</strong>高质量的英文语料中包含大量知识（科学、技术、推理模式），这些知识通过注意力机制可以迁移到中文理解中。实际上，实验中确实发现——即使中文数据比例不高，模型在中文任务上依然表现良好，得益于知识从英文向中文的跨语言迁移。</p>
 
+        <div style="overflow-x:auto">
         <table>
             <tr>
                 <th>语言配比</th>
@@ -229,6 +299,7 @@
                 <td>中文收益递减，英文明显下降</td>
             </tr>
         </table>
+        </div>
 
         <p>实验数据显示：<strong>20% 的中文数据就能让 C-Eval 提升超过 17 个百分点</strong>（从 42.3 到 59.8），而继续增加中文到 40% 时，中文收益开始递减，英文反而开始下降。因此 20-30% 的中文比例是一个合理的甜点区。</p>
 
@@ -273,13 +344,47 @@
 
         <p>经过预训练的数据准备和模型训练，我们得到的只是一个"基座模型"——它掌握了语言知识和推理能力，但还不会像助手一样与人类对话。下一步，我们需要对模型进行<strong>对齐微调</strong>，让它变成真正有用的聊天助手。下一章，我们就来深入探讨 DeepSeek 的 SFT + DPO 对齐策略。</p>
 
+        <h2>4.7 参考文献与延伸</h2>
+        <ul>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2401.02954">DeepSeek LLM</a>（arXiv:2401.02954）——数据源构成、清洗与中英配比均出自此文。</li>
+            <li>Broder. <a href="https://doi.org/10.1109/SEQUEN.1997.666900">On the Resemblance and Containment of Documents</a>（1997）——MinHash 与 Jaccard 相似度的理论基础。</li>
+            <li>Touvron et al. <a href="https://arxiv.org/abs/2307.09288">Llama 2</a>（arXiv:2307.09288）——用于对比的代码数据占比。</li>
+            <li><a href="https://commoncrawl.org/">Common Crawl</a>——最常用的网页语料来源。</li>
+        </ul>
+        <p class="note">数据源占比表中的百分比已标为“估”，为<strong>教学示意</strong>；语言配比实验中 C-Eval / MMLU 的具体分数为示意性数据，用于说明“中文收益递减、英文开始下降”的趋势，非某一公开表格的原值。去重环节的 5%–10%、15%–25%、10%–20% 等保留比例为近似范围，实际值随语料与阈值而异。</p>
+
         <div class="footer-nav">
             <a href="03.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="05.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var a = document.getElementById('j-a'), b = document.getElementById('j-b'), i = document.getElementById('j-i'), s = document.getElementById('j-status');
+    if (!a || !b || !i || !s) { return; }
+    function render() {
+        var A = parseFloat(a.value) || 0, B = parseFloat(b.value) || 0, I = parseFloat(i.value) || 0;
+        var U = A + B - I;
+        if (U <= 0) { s.textContent = '并集大小必须为正，请检查输入。'; return; }
+        var j = I / U;
+        s.textContent = 'J = ' + I + ' / (' + A + '+' + B + '\u2212' + I + ') = ' + j.toFixed(3) + '，' + (j > 0.8 ? '超过阈值 0.8 → 判为重复。' : '未超过阈值 0.8 → 保留。');
+    }
+    var btns = document.querySelectorAll('.kv-widget button[data-a]');
+    for (var k = 0; k < btns.length; k++) {
+        (function (btn) {
+            btn.addEventListener('click', function () {
+                a.value = btn.getAttribute('data-a'); b.value = btn.getAttribute('data-b'); i.value = btn.getAttribute('data-i');
+                for (var m = 0; m < btns.length; m++) { btns[m].setAttribute('aria-pressed', btns[m] === btn ? 'true' : 'false'); }
+                render();
+            });
+        })(btns[k]);
+    }
+    a.addEventListener('input', render); b.addEventListener('input', render); i.addEventListener('input', render);
+    render();
+})();
+</script>
 </body>
 </html>

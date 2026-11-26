@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
+<a class="skip-link" href="#content">跳转至正文</a>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🤖 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 大模型效率困境</a></li>
@@ -41,10 +42,12 @@
             <li><a href="27.html">第27章 DeepSeek-V4</a></li>
             <li><a href="28.html">第28章 开源生态与未来</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-
-        <h2>第23章 本地部署</h2>
+    </nav>
+    <main class="main-content" id="content">
+        <header class="article-header">
+            <h1>第23章 本地部署</h1>
+            <p class="dek">先搞清楚“要跑哪个 DeepSeek”，再决定用什么卡。从 1.5B 到 671B，本地部署是一道关于显存、量化与框架的算术题。</p>
+        </header>
 
         <p>去年冬天，有个朋友兴冲冲地告诉我，他要在自己那台 16GB 显存的 RTX 4060 笔记本上跑 DeepSeek-R1-671B。我在微信上回了一句："兄弟，你这是要用茶杯装太平洋。"他不信，去 Hugging Face 看了一眼模型文件——1.3TB。沉默三秒后他发来一个捂脸表情。</p>
 
@@ -56,7 +59,7 @@
 
         <p>DeepSeek 的所有开源模型都托管在 Hugging Face 上，官方账号是 <code>deepseek-ai</code>。最稳妥的方式是直接用 <code>git lfs</code> 克隆整个仓库：</p>
 
-        <pre><code># 安装 git-lfs（如果还没有）
+        <pre style="overflow-x:auto"><code># 安装 git-lfs（如果还没有）
 sudo apt install git-lfs
 git lfs install
 
@@ -68,7 +71,7 @@ git clone https://huggingface.co/deepseek-ai/DeepSeek-R1</code></pre>
 
         <p>用 <code>huggingface_hub</code> 的 Python SDK 下载则更灵活，可以按需选择文件：</p>
 
-        <pre><code>from huggingface_hub import snapshot_download
+        <pre style="overflow-x:auto"><code>from huggingface_hub import snapshot_download
 
 # 下载完整模型库
 snapshot_download(repo_id="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
@@ -82,7 +85,7 @@ snapshot_download(repo_id="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
 
         <p>如果你在国内，直接从 Hugging Face 下载会非常慢，经常断流。ModelScope（魔搭社区）提供了国内的镜像仓库，下载速度可以提升几十倍：</p>
 
-        <pre><code># 从 ModelScope 下载
+        <pre style="overflow-x:auto"><code># 从 ModelScope 下载
 git clone https://www.modelscope.cn/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B.git
 
 # 或者用 Python SDK
@@ -99,7 +102,7 @@ snapshot_download("deepseek-ai/DeepSeek-R1-Distill-Qwen-7B")</code></pre>
 
         <p>Ollama 把模型管理、量化、推理服务全部打包成了一个单文件二进制程序。安装后只需要两条命令：</p>
 
-        <pre><code># 安装 Ollama（Linux / macOS / Windows 均有支持）
+        <pre style="overflow-x:auto"><code># 安装 Ollama（Linux / macOS / Windows 均有支持）
 curl -fsSL https://ollama.com/install.sh | sh
 
 # 拉取并运行 DeepSeek-R1 蒸馏版 7B
@@ -113,7 +116,7 @@ ollama run deepseek-r1:32b</code></pre>
 
         <p>就这么简单。<code>ollama run</code> 会自动下载模型、加载到 GPU、启动交互式对话。如果你想通过 API 调用，Ollama 默认在 <code>localhost:11434</code> 暴露一个兼容 OpenAI 格式的接口：</p>
 
-        <pre><code>curl http://localhost:11434/v1/chat/completions \
+        <pre style="overflow-x:auto"><code>curl http://localhost:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "deepseek-r1:7b",
@@ -132,7 +135,7 @@ ollama run deepseek-r1:32b</code></pre>
 
         <p>更关键的是，vLLM 从 0.6.0 版本开始原生支持 DeepSeek-V2/V3 的 MLA 注意力机制，无需任何特殊配置。MLA 的 KV Cache 压缩特性在 vLLM 中得到充分利用，推理效率更上一层楼。</p>
 
-        <pre><code># 安装 vLLM
+        <pre style="overflow-x:auto"><code># 安装 vLLM
 pip install vllm
 
 # 启动 OpenAI 兼容的推理服务（单卡场景）
@@ -151,7 +154,7 @@ python -m vllm.entrypoints.openai.api_server \
 
         <p>启动后，你就可以用标准的 OpenAI SDK 来调用本地模型了：</p>
 
-        <pre><code>from openai import OpenAI
+        <pre style="overflow-x:auto"><code>from openai import OpenAI
 
 client = OpenAI(
     base_url="http://localhost:8000/v1",
@@ -170,7 +173,7 @@ print(response.choices[0].message.content)</code></pre>
 
         <p>SGLang 是 2024 年底崛起的 LLM 推理框架，由 LMsys 团队开发。它专门针对 LLM 的结构化生成做了深度优化，在某些场景下吞吐量甚至超过了 vLLM。最吸引人的是，<strong>SGLang 对 DeepSeek 的 MLA 做了手写 CUDA kernel 的极致优化</strong>，官方声称在 DeepSeek-V3 推理上比 vLLM 快了 30%-50%。</p>
 
-        <pre><code># 安装 SGLang
+        <pre style="overflow-x:auto"><code># 安装 SGLang
 pip install sglang[all]
 
 # 启动 DeepSeek 推理服务
@@ -203,6 +206,7 @@ print(chat["answer"])</code></pre>
 
         <p>DeepSeek 的满血版 R1 有 671B 参数，即使是 FP16 也需要 1.3TB 显存——这显然不是普通玩家能企及的。量化技术可以把模型参数从 16-bit 压缩到 4-bit 甚至 2-bit，大幅降低门槛。</p>
 
+        <div style="overflow-x:auto">
         <table>
             <tr>
                 <th>量化方式</th>
@@ -241,12 +245,68 @@ print(chat["answer"])</code></pre>
                 <td>Ollama / llama.cpp</td>
             </tr>
         </table>
+        </div>
 
         <p>虽然 2-bit 量化看起来能把 671B 压到 180GB，但质量损失非常明显。实际使用中，<strong>4-bit 量化是质量和显存的甜点</strong>——大约保留 95% 以上的原始能力，显存降到 1/4。</p>
 
+        <figure>
+            <svg role="img" aria-labelledby="q-title q-desc" viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg">
+                <title id="q-title">671B 模型不同精度下的权重显存</title>
+                <desc id="q-desc">横向柱状图：671B 参数模型在 FP16 下约 1342GB，INT8 约 671GB，4-bit（GPTQ/AWQ/GGUF Q4）约 336–340GB，2-bit 约 180GB。位宽减半，显存约减半。</desc>
+                <rect width="760" height="240" rx="16" fill="#faf8ff"/>
+                <g font-family="system-ui, 'PingFang SC', sans-serif">
+                    <line x1="150" y1="24" x2="150" y2="196" stroke="#c4b5fd"/>
+                    <text x="150" y="16" font-size="11" fill="#64748b">权重显存（GB，同一标尺）</text>
+                    <g font-size="12" fill="#3b0764" text-anchor="end">
+                        <text x="140" y="46">FP16</text><text x="140" y="86">INT8</text><text x="140" y="126">4-bit</text><text x="140" y="166">2-bit</text>
+                    </g>
+                    <g fill="#8b5cf6">
+                        <rect x="150" y="32" width="560" height="22" rx="5"/>
+                        <rect x="150" y="72" width="280" height="22" rx="5"/>
+                        <rect x="150" y="112" width="141" height="22" rx="5" fill="#0d9488"/>
+                        <rect x="150" y="152" width="75" height="22" rx="5"/>
+                    </g>
+                    <g font-size="12" fill="#4c1d95">
+                        <text x="716" y="47">~1342</text><text x="436" y="87">~671</text><text x="297" y="127" fill="#0f766e">~336</text><text x="231" y="167">~180</text>
+                    </g>
+                    <text x="150" y="210" font-size="11" fill="#64748b">FP16→4-bit 把位宽降到 1/4，权重显存也大致降到 1/4；但低位宽的质量损失会明显增大。</text>
+                </g>
+            </svg>
+            <figcaption>权重的显存占用近似与位宽成正比：671B 的 FP16 需要约 1.3TB，4-bit 量化后降到约 336GB。这也是为什么“能否本地跑起来”本质上是一道位宽选择题——而不是模型有多强的选择题。</figcaption>
+        </figure>
+
+        <div class="math-equation">
+            <div class="math-scroll" data-math-scroll style="overflow-x:auto" tabindex="0" role="region" aria-label="权重显存估算公式，可横向滚动">
+                <math display="block" aria-label="权重的字节数等于参数量 P 乘以位宽 b 除以 8">
+                    <mrow>
+                        <mi>M</mi><mo>=</mo>
+                        <mfrac>
+                            <mrow><mi>P</mi><mo>&#x00D7;</mo><mi>b</mi></mrow>
+                            <mn>8</mn>
+                        </mfrac>
+                    </mrow>
+                </math>
+            </div>
+        </div>
+
+        <div class="kv-widget">
+            <p><strong>显存估算沙盘：</strong>给定参数量 P（十亿）与位宽 b，用 <code>M = P×b/8</code> 估算权重的存储占用（<strong>教学示意</strong>，未包含 KV Cache、激活值与框架开销）。</p>
+            <div class="kv-controls">
+                <button type="button" data-p="7" data-b="16" aria-pressed="true">7B / FP16</button>
+                <button type="button" data-p="7" data-b="4">7B / 4-bit</button>
+                <button type="button" data-p="671" data-b="4">671B / 4-bit</button>
+                <button type="button" data-p="671" data-b="16">671B / FP16</button>
+            </div>
+            <div class="kv-controls">
+                <label>P（B） <input id="vram-p" type="number" min="0.1" step="1" value="7"></label>
+                <label>b（bit） <input id="vram-b" type="number" min="1" max="32" step="1" value="16"></label>
+            </div>
+            <p class="kv-status" id="vram-status" role="status" aria-live="polite"></p>
+        </div>
+
         <p>在 vLLM 中加载 AWQ 量化模型：</p>
 
-        <pre><code># 使用社区预量化的 AWQ 版本
+        <pre style="overflow-x:auto"><code># 使用社区预量化的 AWQ 版本
 python -m vllm.entrypoints.openai.api_server \
   --model deepseek-ai/DeepSeek-R1-Distill-Qwen-7B-AWQ \
   --quantization awq \
@@ -254,7 +314,7 @@ python -m vllm.entrypoints.openai.api_server \
 
         <p>使用 bitsandbytes 进行动态 4-bit 加载（适用于 Transformers 生态）：</p>
 
-        <pre><code>from transformers import AutoModelForCausalLM, AutoTokenizer
+        <pre style="overflow-x:auto"><code>from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 
 model = AutoModelForCausalLM.from_pretrained(
@@ -270,6 +330,7 @@ tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-R1-Distill-Qwen-
 
         <p>这是大家最关心的问题：<strong>要跑 DeepSeek，我到底需要什么显卡？</strong></p>
 
+        <div style="overflow-x:auto">
         <table>
             <tr>
                 <th>模型规模</th>
@@ -321,6 +382,7 @@ tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-R1-Distill-Qwen-
                 <td>大规模生产部署</td>
             </tr>
         </table>
+        </div>
 
         <div class="tip">
             <strong>省钱建议：</strong>如果你不差钱，直接上 A100-80G × 8。如果预算有限，去阿里云或腾讯云租用 GPU 实例比买卡划算得多——A100-80G 每小时约 20-30 元，按需使用，用完释放。对于个人开发者，二手 RTX 3090（24GB，约 5000 元）是性价比之王，两块串联就能跑 32B 模型。
@@ -336,7 +398,7 @@ tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-R1-Distill-Qwen-
 
         <p><strong>方案二：CPU Offload</strong>——用 <code>device_map="auto"</code> 让 Transformers 自动把部分层放到 CPU 内存上。代价是推理速度会显著下降：</p>
 
-        <pre><code>model = AutoModelForCausalLM.from_pretrained(
+        <pre style="overflow-x:auto"><code>model = AutoModelForCausalLM.from_pretrained(
     "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
     device_map="auto",
     offload_folder="./offload",
@@ -345,7 +407,7 @@ tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-R1-Distill-Qwen-
 
         <p><strong>方案三：多卡张量并行（Tensor Parallel）</strong>——把模型切分到多张 GPU 上。vLLM 和 SGLang 都原生支持：</p>
 
-        <pre><code># 双卡并行跑 32B 模型
+        <pre style="overflow-x:auto"><code># 双卡并行跑 32B 模型
 python -m vllm.entrypoints.openai.api_server \
   --model deepseek-ai/DeepSeek-R1-Distill-Qwen-32B \
   --tensor-parallel-size 2 \
@@ -375,13 +437,47 @@ python -m vllm.entrypoints.openai.api_server \
 
         <p>本地部署只是第一步。真正让模型为你所用的，是把它适配到你的业务场景中。下一章，我们进入 <strong>微调适配</strong>——如何用 LoRA 和 QLoRA 在低成本下把 DeepSeek 变成你的领域专家。</p>
 
+        <h2>23.8 参考文献与延伸</h2>
+        <ul>
+            <li>Kwon et al. <a href="https://arxiv.org/abs/2309.06180">Efficient Memory Management for Large Language Model Serving with PagedAttention</a>（arXiv:2309.06180）——vLLM 的 PagedAttention 原理。</li>
+            <li>Zheng et al. <a href="https://arxiv.org/abs/2312.07104">SGLang: Efficient Execution of Structured Language Model Programs</a>（arXiv:2312.07104）——SGLang 的 RadixAttention 与运行时。</li>
+            <li>DeepSeek-AI. <a href="https://arxiv.org/abs/2501.12948">DeepSeek-R1</a>（arXiv:2501.12948）——R1 与蒸馏版模型的开源发布。</li>
+            <li><a href="https://ollama.com/">Ollama</a>、<a href="https://docs.vllm.ai/">vLLM 文档</a>——本章命令行的官方入口。</li>
+        </ul>
+        <p class="note">量化显存估算表中的 GB 数值为按 <strong>M = P×b/8</strong> 换算的大致量级（未含 KV Cache、激活与框架开销，实际占用会更高）；1.3TB 的 FP16 体量对应 671B×16bit 的权重。本章中 vLLM vs SGLang 的吞吐数字（1800 / 2400 tokens/s）为个人单次测量，随硬件、输入长度与批大小变化，不可直接外推；沙盘为<strong>教学示意</strong>。部署命令与参数以各框架当前文档为准。</p>
+
         <div class="footer-nav">
             <a href="22.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="24.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
+<script>
+(function () {
+    var p = document.getElementById('vram-p'), b = document.getElementById('vram-b'), s = document.getElementById('vram-status');
+    if (!p || !b || !s) { return; }
+    function render() {
+        var P = parseFloat(p.value) || 0, B = parseFloat(b.value) || 0;
+        var bytes = P * 1e9 * B / 8;
+        var gb = bytes / 1e9;
+        var gbGiB = bytes / Math.pow(1024, 3);
+        s.textContent = 'P=' + P + 'B，b=' + B + ' bit：权重 ≈ ' + gb.toFixed(1) + ' GB（= ' + gbGiB.toFixed(1) + ' GiB）。';
+    }
+    var btns = document.querySelectorAll('.kv-widget button[data-p]');
+    for (var k = 0; k < btns.length; k++) {
+        (function (btn) {
+            btn.addEventListener('click', function () {
+                p.value = btn.getAttribute('data-p'); b.value = btn.getAttribute('data-b');
+                for (var m = 0; m < btns.length; m++) { btns[m].setAttribute('aria-pressed', btns[m] === btn ? 'true' : 'false'); }
+                render();
+            });
+        })(btns[k]);
+    }
+    p.addEventListener('input', render); b.addEventListener('input', render);
+    render();
+})();
+</script>
 </body>
 </html>

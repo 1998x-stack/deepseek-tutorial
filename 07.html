@@ -159,6 +159,20 @@ DeepSeekMoE: output = SharedExpert(x) + Σ_{i in topk} gate_weights_i × RoutedE
             <strong>参数对比：</strong>传统 MoE（如 Mixtral 8x7B）有 8 个专家，每 token 激活 2 个。DeepSeekMoE 有 1 共享 + 16 路由 = 17 个专家，每 token 激活 1 共享 + 2 路由 = 3 个专家。虽然 DeepSeekMoE 激活的专家数多了 1 个（共享专家），但每个专家的参数量显著减小（因为细粒度切分，后面会讲），实际每 token 的计算量反而更少。这就是"更多专家、更细粒度、更少计算"的设计理念。
         </div>
 
+        <div class="kv-widget">
+            <p><strong>专家激活沙盘：</strong>给定共享专家数 S、路由专家数 N 与每 token 激活的路由专家数 k，估算「激活专家数 / 总专家数」的稀疏度（激活专家数 = S + k，总专家数 = S + N）。这是<strong>教学示意</strong>，忽略专家参数量差异与门控本身的浮点开销。</p>
+            <div class="kv-controls">
+                <button type="button" data-s="0" data-n="8" data-k="2">传统 MoE（Mixtral 8x7B）</button>
+                <button type="button" data-s="1" data-n="16" data-k="2">DeepSeekMoE（1 共享 + 16 路由）</button>
+            </div>
+            <div class="kv-controls">
+                <label>S（共享） <input id="moe-s" type="number" min="0" max="4" step="1" value="1"></label>
+                <label>N（路由） <input id="moe-n" type="number" min="1" max="256" step="1" value="16"></label>
+                <label>k（激活路由） <input id="moe-k" type="number" min="1" max="8" step="1" value="2"></label>
+            </div>
+            <p class="kv-status" id="moe-status" role="status" aria-live="polite"></p>
+        </div>
+
         <h2>7.3 细粒度专家切分</h2>
 
         <p>DeepSeekMoE 第二个核心创新是<strong>细粒度专家切分（Fine-Grained Expert Segmentation）</strong>。</p>
@@ -391,5 +405,25 @@ D = 设备总数</code></pre>
     </main>
 </div>
 </div>
+<script>
+(function () {
+    var s = document.getElementById('moe-s'), n = document.getElementById('moe-n'), k = document.getElementById('moe-k'), out = document.getElementById('moe-status');
+    if (!s || !n || !k || !out) { return; }
+    function render() {
+        var S = parseInt(s.value, 10) || 0, N = parseInt(n.value, 10) || 0, K = parseInt(k.value, 10) || 0;
+        if (N <= 0) { out.textContent = '\u8def\u7531\u4e13\u5bb6\u6570 N \u9700\u5927\u4e8e 0\u3002'; return; }
+        var act = S + Math.min(K, N), total = S + N, ratio = act / total;
+        out.textContent = '\u603b\u4e13\u5bb6\u6570 = ' + S + ' + ' + N + ' = ' + total + '\uff0c\u6bcf token \u6fc0\u6d3b ' + S + ' + ' + Math.min(K, N) + ' = ' + act + ' \u4e2a\uff0c\u6fc0\u6d3b\u5360\u6bd4 = ' + act + '/' + total + ' = ' + (ratio * 100).toFixed(1) + '%\u3002';
+    }
+    [s, n, k].forEach(function (el) { el.addEventListener('input', render); });
+    var presets = document.querySelectorAll('.kv-controls button[data-n]');
+    for (var i = 0; i < presets.length; i++) {
+        presets[i].addEventListener('click', (function (btn) {
+            return function () { s.value = btn.getAttribute('data-s'); n.value = btn.getAttribute('data-n'); k.value = btn.getAttribute('data-k'); render(); };
+        })(presets[i]));
+    }
+    render();
+})();
+</script>
 </body>
 </html>

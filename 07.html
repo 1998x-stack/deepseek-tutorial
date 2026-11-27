@@ -205,6 +205,34 @@ DeepSeekMoE 细粒度切分:
 
         <p>实验证明：在固定的总参数和计算量预算下，<strong>更多但更小的专家总是优于更少但更大的专家</strong>——直到专家变得太小以至于每个专家学不到有意义的表示。DeepSeekMoE 的论文发现，路由专家数量在 16-32 之间是一个合理的范围。</p>
 
+        <figure>
+            <svg role="img" aria-labelledby="moe-fine-title moe-fine-desc" viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+                <title id="moe-fine-title">细粒度专家切分：同一总参数预算下 8 个大专家拆分为 16 个小专家</title>
+                <desc id="moe-fine-desc">左图 8 个较宽的路由专家，右图在同一总参数预算下拆成 16 个更小的专家；每 token 激活的路由专家数仍为 2，故每 token 计算量近似不变，但知识空间被切得更细。</desc>
+                <rect width="760" height="260" rx="16" fill="#faf8ff"/>
+                <defs><marker id="moe-fine-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 z" fill="#7c3aed"/></marker></defs>
+                <g font-family="system-ui, 'PingFang SC', sans-serif" text-anchor="middle" font-size="14">
+                    <text x="144" y="34" fill="#7c2d12">8 个大专家（每个更宽）</text>
+                    <g fill="#ffe4d6" stroke="#d06d4d">
+                        <rect x="33" y="60" width="24" height="150" rx="4"/><rect x="63" y="60" width="24" height="150" rx="4"/><rect x="93" y="60" width="24" height="150" rx="4"/><rect x="123" y="60" width="24" height="150" rx="4"/>
+                        <rect x="153" y="60" width="24" height="150" rx="4"/><rect x="183" y="60" width="24" height="150" rx="4"/><rect x="213" y="60" width="24" height="150" rx="4"/><rect x="243" y="60" width="24" height="150" rx="4"/>
+                    </g>
+                    <text x="144" y="235" font-size="12" fill="#7c2d12">总参数预算固定</text>
+                    <text x="316" y="128" font-size="13" fill="#7c2d12">细粒度切分</text>
+                    <path d="M282 140 H352" stroke="#7c3aed" stroke-width="2.5" fill="none" marker-end="url(#moe-fine-arrow)"/>
+                    <text x="551" y="34" fill="#7c2d12">16 个小专家（总参数不变）</text>
+                    <g fill="#ffe4d6" stroke="#d06d4d">
+                        <rect x="370" y="80" width="18" height="100" rx="4"/><rect x="393" y="80" width="18" height="100" rx="4"/><rect x="416" y="80" width="18" height="100" rx="4"/><rect x="439" y="80" width="18" height="100" rx="4"/>
+                        <rect x="462" y="80" width="18" height="100" rx="4"/><rect x="485" y="80" width="18" height="100" rx="4"/><rect x="508" y="80" width="18" height="100" rx="4"/><rect x="531" y="80" width="18" height="100" rx="4"/>
+                        <rect x="554" y="80" width="18" height="100" rx="4"/><rect x="577" y="80" width="18" height="100" rx="4"/><rect x="600" y="80" width="18" height="100" rx="4"/><rect x="623" y="80" width="18" height="100" rx="4"/>
+                        <rect x="646" y="80" width="18" height="100" rx="4"/><rect x="669" y="80" width="18" height="100" rx="4"/><rect x="692" y="80" width="18" height="100" rx="4"/><rect x="715" y="80" width="18" height="100" rx="4"/>
+                    </g>
+                    <text x="551" y="235" font-size="12" fill="#7c2d12">每 token 仍激活其中 2 个</text>
+                </g>
+            </svg>
+            <figcaption>保持总参数预算不变，把 8 个“大专家”拆成 16 个“小专家”：单个专家覆盖的知识区域更窄，多个小专家可覆盖更细粒度的区域，从而让知识空间的离散化更精细。每 token 激活的路由专家数仍为 2，因此每 token 计算量近似不变——这正是 7.2 节“更多专家、更细粒度、更少计算”的几何含义。图中 8 个大专家与 16 个小专家的切分比例与本章 7.3 节的说明一致。</figcaption>
+        </figure>
+
         <h2>7.4 轻量化门控路由</h2>
 
         <p>有了更多的专家，门控网络的计算量也会增大（因为需要计算 token 和每个专家的匹配度）。为了控制这部分开销，DeepSeekMoE 采用了<strong>轻量化门控路由</strong>设计。</p>
